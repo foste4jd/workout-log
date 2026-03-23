@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login – WorkoutLog</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+    <h1 class="auth-logo">WorkoutLog</h1>
+
+    <div class="tab-bar">
+      <button class="tab active" data-tab="login">Login</button>
+      <button class="tab" data-tab="register">Register</button>
+    </div>
+
+    <!-- Login form -->
+    <form id="login-form" class="auth-form">
+      <div class="form-group">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" placeholder="you@example.com" required />
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" placeholder="••••••••" required />
+      </div>
+      <p id="login-error" class="form-error hidden"></p>
+      <button type="submit" class="btn btn-primary btn-full">Login</button>
+    </form>
+
+    <!-- Register form -->
+    <form id="register-form" class="auth-form hidden">
+      <div class="form-group">
+        <label for="reg-username">Username</label>
+        <input id="reg-username" type="text" placeholder="johndoe" required />
+      </div>
+      <div class="form-group">
+        <label for="reg-email">Email</label>
+        <input id="reg-email" type="email" placeholder="you@example.com" required />
+      </div>
+      <div class="form-group">
+        <label for="reg-password">Password</label>
+        <input id="reg-password" type="password" placeholder="••••••••" required />
+      </div>
+      <p id="register-error" class="form-error hidden"></p>
+      <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+    </form>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    if (localStorage.getItem("token")) window.location.href = "/workouts";
+
+    // Tab switching
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        document.querySelectorAll(".auth-form").forEach(f => f.classList.add("hidden"));
+        document.getElementById(tab.dataset.tab + "-form").classList.remove("hidden");
+      });
+    });
+
+    document.getElementById("login-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const errorEl = document.getElementById("login-error");
+      try {
+        const data = await api("/api/users/login", "POST", {
+          email: document.getElementById("login-email").value,
+          password: document.getElementById("login-password").value,
+        });
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("username", data.user.username);
+        window.location.href = "/workouts";
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove("hidden");
+      }
+    });
+
+    document.getElementById("register-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const errorEl = document.getElementById("register-error");
+      try {
+        const data = await api("/api/users/register", "POST", {
+          username: document.getElementById("reg-username").value,
+          email: document.getElementById("reg-email").value,
+          password: document.getElementById("reg-password").value,
+        });
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("username", data.user.username);
+        window.location.href = "/workouts";
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove("hidden");
+      }
+    });
+  </script>
+</body>
+</html>

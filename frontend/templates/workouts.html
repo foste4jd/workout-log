@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Workouts – WorkoutLog</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body class="app-page">
+
+  <!-- Nav -->
+  <nav class="navbar">
+    <span class="nav-logo">WorkoutLog</span>
+    <div class="nav-right">
+      <span id="nav-username"></span>
+      <button id="logout-btn" class="btn btn-ghost">Logout</button>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="page-header">
+      <h2>My Workouts</h2>
+      <button id="open-modal-btn" class="btn btn-primary">+ Log Workout</button>
+    </div>
+
+    <div id="workout-list" class="workout-grid">
+      <p class="empty-state">Loading...</p>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Log Workout</h3>
+        <button id="close-modal-btn" class="btn-icon">&times;</button>
+      </div>
+      <form id="workout-form">
+        <input type="hidden" id="workout-id" />
+        <div class="form-group">
+          <label for="workout-title">Title <span class="required">*</span></label>
+          <input id="workout-title" type="text" placeholder="e.g. Morning Run" required />
+        </div>
+        <div class="form-group">
+          <label for="workout-duration">Duration (minutes)</label>
+          <input id="workout-duration" type="number" min="1" placeholder="30" />
+        </div>
+        <div class="form-group">
+          <label for="workout-notes">Notes</label>
+          <textarea id="workout-notes" rows="3" placeholder="How did it go?"></textarea>
+        </div>
+        <p id="workout-error" class="form-error hidden"></p>
+        <div class="modal-actions">
+          <button type="button" id="cancel-btn" class="btn btn-ghost">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete confirmation -->
+  <div id="delete-overlay" class="modal-overlay hidden">
+    <div class="modal modal-sm">
+      <h3>Delete workout?</h3>
+      <p>This can't be undone.</p>
+      <div class="modal-actions">
+        <button id="cancel-delete-btn" class="btn btn-ghost">Cancel</button>
+        <button id="confirm-delete-btn" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    if (!localStorage.getItem("token")) window.location.href = "/login";
+
+    document.getElementById("nav-username").textContent = localStorage.getItem("username") || "";
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "/login";
+    });
+
+    // --- Load workouts ---
+    async function loadWorkouts() {
+      const list = document.getElementById("workout-list");
+      try {
+        const workouts = await api("/api/workouts/", "GET");
+        if (workouts.length === 0) {
+          list.innerHTML = '<p class="empty-state">No workouts yet. Log your first one!</p>';
+          return;
+        }
+        list.innerHTML = workouts.map(w => `
+          <div class="workout-card" data-id="${w.id}">
+            <div class="workout-card-header">
+              <h3>${escapeHtml(w.title)}</h3>
+              <div class="card-actions">
+                <button class="btn-icon edit-btn" data-id="${w.id}" title="Edit">&#9998;</button>
+                <button class="btn-icon delete-btn" data-id="${w.id}" title="Delete">&times;</button>
+              </div>
+            </div>
+            ${w.duration_minutes ? `<p class="workout-meta">${w.duration_minutes} min</p>` : ""}
+            ${w.notes ? `<p class="workout-notes">${escapeHtml(w.notes)}</p>` : ""}
+            <p class="workout-date">${formatDate(w.date)}</p>
+          </div>
+        `).join("");
+
+        document.querySelectorAll(".edit-btn").forEach(btn =>
+          btn.addEventListener("click", () => openEditModal(Number(btn.dataset.id), workouts))
+        );
+        document.querySelectorAll(".delete-btn").forEach(btn =>
+          btn.addEventListener("click", () => openDeleteModal(Number(btn.dataset.id)))
+        );
+      } catch (err) {
+        list.innerHTML = `<p class="empty-state error">${err.message}</p>`;
+      }
+    }
+
+    // --- Modal logic ---
+    const overlay = document.getElementById("modal-overlay");
+    const form = document.getElementById("workout-form");
+
+    function openCreateModal() {
+      document.getElementById("modal-title").textContent = "Log Workout";
+      form.reset();
+      document.getElementById("workout-id").value = "";
+      document.getElementById("workout-error").classList.add("hidden");
+      overlay.classList.remove("hidden");
+    }
+
+    function openEditModal(id, workouts) {
+      const w = workouts.find(x => x.id === id);
+      document.getElementById("modal-title").textContent = "Edit Workout";
+      document.getElementById("workout-id").value = w.id;
+      document.getElementById("workout-title").value = w.title;
+      document.getElementById("workout-duration").value = w.duration_minutes || "";
+      document.getElementById("workout-notes").value = w.notes || "";
+      document.getElementById("workout-error").classList.add("hidden");
+      overlay.classList.remove("hidden");
+    }
+
+    function closeModal() { overlay.classList.add("hidden"); }
+
+    document.getElementById("open-modal-btn").addEventListener("click", openCreateModal);
+    document.getElementById("close-modal-btn").addEventListener("click", closeModal);
+    document.getElementById("cancel-btn").addEventListener("click", closeModal);
+    overlay.addEventListener("click", e => { if (e.target === overlay) closeModal(); });
+
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const errorEl = document.getElementById("workout-error");
+      const id = document.getElementById("workout-id").value;
+      const payload = {
+        title: document.getElementById("workout-title").value,
+        duration_minutes: Number(document.getElementById("workout-duration").value) || null,
+        notes: document.getElementById("workout-notes").value || null,
+      };
+      try {
+        if (id) {
+          await api(`/api/workouts/${id}`, "PUT", payload);
+        } else {
+          await api("/api/workouts/", "POST", payload);
+        }
+        closeModal();
+        loadWorkouts();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove("hidden");
+      }
+    });
+
+    // --- Delete ---
+    let pendingDeleteId = null;
+    const deleteOverlay = document.getElementById("delete-overlay");
+
+    function openDeleteModal(id) {
+      pendingDeleteId = id;
+      deleteOverlay.classList.remove("hidden");
+    }
+
+    document.getElementById("cancel-delete-btn").addEventListener("click", () => {
+      deleteOverlay.classList.add("hidden");
+    });
+
+    document.getElementById("confirm-delete-btn").addEventListener("click", async () => {
+      await api(`/api/workouts/${pendingDeleteId}`, "DELETE");
+      deleteOverlay.classList.add("hidden");
+      loadWorkouts();
+    });
+
+    loadWorkouts();
+  </script>
+</body>
+</html>
