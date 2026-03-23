@@ -25,9 +25,11 @@ def create_app():
 
     from backend.api.routes.users import users_bp
     from backend.api.routes.workouts import workouts_bp
+    from backend.api.routes.exercises import exercises_bp
     from backend.api.routes.views import views_bp
     app.register_blueprint(users_bp)
     app.register_blueprint(workouts_bp)
+    app.register_blueprint(exercises_bp)
     app.register_blueprint(views_bp)
 
     with app.app_context():
@@ -38,4 +40,4 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True)
+    app.run(debug=True, port=8080)

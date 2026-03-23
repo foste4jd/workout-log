@@ -2,15 +2,13 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token
 from backend.db.database import db
 from backend.models.user import User
+from backend.app import bcrypt
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
 
 @users_bp.post("/register")
 def register():
-    from flask_bcrypt import Bcrypt
-    bcrypt = Bcrypt()
-
     data = request.get_json()
     if not data or not data.get("username") or not data.get("email") or not data.get("password"):
         return jsonify({"error": "username, email, and password are required"}), 400
@@ -29,9 +27,6 @@ def register():
 
 @users_bp.post("/login")
 def login():
-    from flask_bcrypt import Bcrypt
-    bcrypt = Bcrypt()
-
     data = request.get_json()
     if not data or not data.get("email") or not data.get("password"):
         return jsonify({"error": "email and password are required"}), 400

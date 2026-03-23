@@ -28,7 +28,7 @@
     </div>
   </main>
 
-  <!-- Modal -->
+  <!-- Workout modal -->
   <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal">
       <div class="modal-header">
@@ -58,10 +58,51 @@
     </div>
   </div>
 
+  <!-- Exercise modal -->
+  <div id="exercise-modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="exercise-modal-title">Add Exercise</h3>
+        <button id="close-exercise-modal-btn" class="btn-icon">&times;</button>
+      </div>
+      <form id="exercise-form">
+        <input type="hidden" id="exercise-id" />
+        <input type="hidden" id="exercise-workout-id" />
+        <div class="form-group">
+          <label for="exercise-name">Exercise <span class="required">*</span></label>
+          <input id="exercise-name" type="text" placeholder="e.g. Bench Press" required />
+        </div>
+        <div class="exercise-row">
+          <div class="form-group">
+            <label for="exercise-sets">Sets</label>
+            <input id="exercise-sets" type="number" min="1" placeholder="3" />
+          </div>
+          <div class="form-group">
+            <label for="exercise-reps">Reps</label>
+            <input id="exercise-reps" type="number" min="1" placeholder="10" />
+          </div>
+          <div class="form-group">
+            <label for="exercise-weight">Weight (kg)</label>
+            <input id="exercise-weight" type="number" min="0" step="0.5" placeholder="60" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="exercise-notes">Notes</label>
+          <input id="exercise-notes" type="text" placeholder="e.g. Felt strong" />
+        </div>
+        <p id="exercise-error" class="form-error hidden"></p>
+        <div class="modal-actions">
+          <button type="button" id="cancel-exercise-btn" class="btn btn-ghost">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Delete confirmation -->
   <div id="delete-overlay" class="modal-overlay hidden">
     <div class="modal modal-sm">
-      <h3>Delete workout?</h3>
+      <h3 id="delete-title">Delete workout?</h3>
       <p>This can't be undone.</p>
       <div class="modal-actions">
         <button id="cancel-delete-btn" class="btn btn-ghost">Cancel</button>
@@ -73,7 +114,6 @@
   <script src="/static/js/main.js"></script>
   <script>
     if (!localStorage.getItem("token")) window.location.href = "/login";
-
     document.getElementById("nav-username").textContent = localStorage.getItem("username") || "";
 
     document.getElementById("logout-btn").addEventListener("click", () => {
@@ -81,7 +121,7 @@
       window.location.href = "/login";
     });
 
-    // --- Load workouts ---
+    // ── Load workouts ─────────────────────────────────────
     async function loadWorkouts() {
       const list = document.getElementById("workout-list");
       try {
@@ -95,40 +135,100 @@
             <div class="workout-card-header">
               <h3>${escapeHtml(w.title)}</h3>
               <div class="card-actions">
-                <button class="btn-icon edit-btn" data-id="${w.id}" title="Edit">&#9998;</button>
-                <button class="btn-icon delete-btn" data-id="${w.id}" title="Delete">&times;</button>
+                <button class="btn-icon edit-btn" data-id="${w.id}" title="Edit workout">&#9998;</button>
+                <button class="btn-icon delete-btn" data-type="workout" data-id="${w.id}" title="Delete workout">&times;</button>
               </div>
             </div>
             ${w.duration_minutes ? `<p class="workout-meta">${w.duration_minutes} min</p>` : ""}
             ${w.notes ? `<p class="workout-notes">${escapeHtml(w.notes)}</p>` : ""}
+
+            <div class="exercise-section">
+              <div class="exercise-section-header">
+                <span class="exercise-section-label">Exercises</span>
+                <button class="btn-icon add-exercise-btn" data-workout-id="${w.id}" title="Add exercise">+ Add</button>
+              </div>
+              <ul class="exercise-list" id="exercises-${w.id}">
+                <li class="exercise-loading">Loading...</li>
+              </ul>
+            </div>
+
             <p class="workout-date">${formatDate(w.date)}</p>
           </div>
         `).join("");
 
         document.querySelectorAll(".edit-btn").forEach(btn =>
-          btn.addEventListener("click", () => openEditModal(Number(btn.dataset.id), workouts))
+          btn.addEventListener("click", () => openEditWorkoutModal(Number(btn.dataset.id), workouts))
         );
-        document.querySelectorAll(".delete-btn").forEach(btn =>
-          btn.addEventListener("click", () => openDeleteModal(Number(btn.dataset.id)))
+        document.querySelectorAll(".delete-btn[data-type='workout']").forEach(btn =>
+          btn.addEventListener("click", () => openDeleteModal("workout", Number(btn.dataset.id)))
         );
+        document.querySelectorAll(".add-exercise-btn").forEach(btn =>
+          btn.addEventListener("click", () => openCreateExerciseModal(Number(btn.dataset.workoutId)))
+        );
+
+        // Load exercises for each workout
+        workouts.forEach(w => loadExercises(w.id));
       } catch (err) {
         list.innerHTML = `<p class="empty-state error">${err.message}</p>`;
       }
     }
 
-    // --- Modal logic ---
-    const overlay = document.getElementById("modal-overlay");
-    const form = document.getElementById("workout-form");
+    // ── Exercises ─────────────────────────────────────────
+    async function loadExercises(workoutId) {
+      const ul = document.getElementById(`exercises-${workoutId}`);
+      if (!ul) return;
+      try {
+        const exercises = await api(`/api/workouts/${workoutId}/exercises`);
+        if (exercises.length === 0) {
+          ul.innerHTML = '<li class="exercise-empty">No exercises logged yet.</li>';
+          return;
+        }
+        ul.innerHTML = exercises.map(e => `
+          <li class="exercise-item" data-id="${e.id}">
+            <div class="exercise-info">
+              <span class="exercise-name">${escapeHtml(e.name)}</span>
+              <span class="exercise-stats">${formatExerciseStats(e)}</span>
+              ${e.notes ? `<span class="exercise-notes">${escapeHtml(e.notes)}</span>` : ""}
+            </div>
+            <div class="exercise-actions">
+              <button class="btn-icon edit-exercise-btn" data-id="${e.id}" data-workout-id="${e.workout_id}" title="Edit">&#9998;</button>
+              <button class="btn-icon delete-btn" data-type="exercise" data-id="${e.id}" data-workout-id="${e.workout_id}" title="Delete">&times;</button>
+            </div>
+          </li>
+        `).join("");
 
-    function openCreateModal() {
+        ul.querySelectorAll(".edit-exercise-btn").forEach(btn =>
+          btn.addEventListener("click", () => openEditExerciseModal(Number(btn.dataset.id), exercises))
+        );
+        ul.querySelectorAll(".delete-btn[data-type='exercise']").forEach(btn =>
+          btn.addEventListener("click", () => openDeleteModal("exercise", Number(btn.dataset.id), Number(btn.dataset.workoutId)))
+        );
+      } catch (err) {
+        ul.innerHTML = `<li class="exercise-empty error">${err.message}</li>`;
+      }
+    }
+
+    function formatExerciseStats(e) {
+      const parts = [];
+      if (e.sets) parts.push(`${e.sets} sets`);
+      if (e.reps) parts.push(`${e.reps} reps`);
+      if (e.weight_kg) parts.push(`${e.weight_kg} kg`);
+      return parts.join(" · ");
+    }
+
+    // ── Workout modal ─────────────────────────────────────
+    const overlay = document.getElementById("modal-overlay");
+    const workoutForm = document.getElementById("workout-form");
+
+    function openCreateWorkoutModal() {
       document.getElementById("modal-title").textContent = "Log Workout";
-      form.reset();
+      workoutForm.reset();
       document.getElementById("workout-id").value = "";
       document.getElementById("workout-error").classList.add("hidden");
       overlay.classList.remove("hidden");
     }
 
-    function openEditModal(id, workouts) {
+    function openEditWorkoutModal(id, workouts) {
       const w = workouts.find(x => x.id === id);
       document.getElementById("modal-title").textContent = "Edit Workout";
       document.getElementById("workout-id").value = w.id;
@@ -139,14 +239,14 @@
       overlay.classList.remove("hidden");
     }
 
-    function closeModal() { overlay.classList.add("hidden"); }
+    function closeWorkoutModal() { overlay.classList.add("hidden"); }
 
-    document.getElementById("open-modal-btn").addEventListener("click", openCreateModal);
-    document.getElementById("close-modal-btn").addEventListener("click", closeModal);
-    document.getElementById("cancel-btn").addEventListener("click", closeModal);
-    overlay.addEventListener("click", e => { if (e.target === overlay) closeModal(); });
+    document.getElementById("open-modal-btn").addEventListener("click", openCreateWorkoutModal);
+    document.getElementById("close-modal-btn").addEventListener("click", closeWorkoutModal);
+    document.getElementById("cancel-btn").addEventListener("click", closeWorkoutModal);
+    overlay.addEventListener("click", e => { if (e.target === overlay) closeWorkoutModal(); });
 
-    form.addEventListener("submit", async e => {
+    workoutForm.addEventListener("submit", async e => {
       e.preventDefault();
       const errorEl = document.getElementById("workout-error");
       const id = document.getElementById("workout-id").value;
@@ -161,7 +261,7 @@
         } else {
           await api("/api/workouts/", "POST", payload);
         }
-        closeModal();
+        closeWorkoutModal();
         loadWorkouts();
       } catch (err) {
         errorEl.textContent = err.message;
@@ -169,12 +269,73 @@
       }
     });
 
-    // --- Delete ---
-    let pendingDeleteId = null;
+    // ── Exercise modal ─────────────────────────────────────
+    const exerciseOverlay = document.getElementById("exercise-modal-overlay");
+    const exerciseForm = document.getElementById("exercise-form");
+
+    function openCreateExerciseModal(workoutId) {
+      document.getElementById("exercise-modal-title").textContent = "Add Exercise";
+      exerciseForm.reset();
+      document.getElementById("exercise-id").value = "";
+      document.getElementById("exercise-workout-id").value = workoutId;
+      document.getElementById("exercise-error").classList.add("hidden");
+      exerciseOverlay.classList.remove("hidden");
+    }
+
+    function openEditExerciseModal(id, exercises) {
+      const e = exercises.find(x => x.id === id);
+      document.getElementById("exercise-modal-title").textContent = "Edit Exercise";
+      document.getElementById("exercise-id").value = e.id;
+      document.getElementById("exercise-workout-id").value = e.workout_id;
+      document.getElementById("exercise-name").value = e.name;
+      document.getElementById("exercise-sets").value = e.sets || "";
+      document.getElementById("exercise-reps").value = e.reps || "";
+      document.getElementById("exercise-weight").value = e.weight_kg || "";
+      document.getElementById("exercise-notes").value = e.notes || "";
+      document.getElementById("exercise-error").classList.add("hidden");
+      exerciseOverlay.classList.remove("hidden");
+    }
+
+    function closeExerciseModal() { exerciseOverlay.classList.add("hidden"); }
+
+    document.getElementById("close-exercise-modal-btn").addEventListener("click", closeExerciseModal);
+    document.getElementById("cancel-exercise-btn").addEventListener("click", closeExerciseModal);
+    exerciseOverlay.addEventListener("click", e => { if (e.target === exerciseOverlay) closeExerciseModal(); });
+
+    exerciseForm.addEventListener("submit", async e => {
+      e.preventDefault();
+      const errorEl = document.getElementById("exercise-error");
+      const id = document.getElementById("exercise-id").value;
+      const workoutId = document.getElementById("exercise-workout-id").value;
+      const payload = {
+        name: document.getElementById("exercise-name").value,
+        sets: Number(document.getElementById("exercise-sets").value) || null,
+        reps: Number(document.getElementById("exercise-reps").value) || null,
+        weight_kg: Number(document.getElementById("exercise-weight").value) || null,
+        notes: document.getElementById("exercise-notes").value || null,
+      };
+      try {
+        if (id) {
+          await api(`/api/exercises/${id}`, "PUT", payload);
+        } else {
+          await api(`/api/workouts/${workoutId}/exercises`, "POST", payload);
+        }
+        closeExerciseModal();
+        loadExercises(Number(workoutId));
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove("hidden");
+      }
+    });
+
+    // ── Delete ─────────────────────────────────────────────
+    let pendingDelete = null;
     const deleteOverlay = document.getElementById("delete-overlay");
 
-    function openDeleteModal(id) {
-      pendingDeleteId = id;
+    function openDeleteModal(type, id, workoutId = null) {
+      pendingDelete = { type, id, workoutId };
+      document.getElementById("delete-title").textContent =
+        type === "workout" ? "Delete workout?" : "Delete exercise?";
       deleteOverlay.classList.remove("hidden");
     }
 
@@ -183,9 +344,15 @@
     });
 
     document.getElementById("confirm-delete-btn").addEventListener("click", async () => {
-      await api(`/api/workouts/${pendingDeleteId}`, "DELETE");
+      const { type, id, workoutId } = pendingDelete;
+      if (type === "workout") {
+        await api(`/api/workouts/${id}`, "DELETE");
+        loadWorkouts();
+      } else {
+        await api(`/api/exercises/${id}`, "DELETE");
+        loadExercises(workoutId);
+      }
       deleteOverlay.classList.add("hidden");
-      loadWorkouts();
     });
 
     loadWorkouts();

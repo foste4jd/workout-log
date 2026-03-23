@@ -11,6 +11,7 @@ class Workout(db.Model):
     notes = db.Column(db.Text)
     duration_minutes = db.Column(db.Integer)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    exercises = db.relationship("Exercise", backref="workout", lazy=True, cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
