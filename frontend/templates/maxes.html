@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Training Maxes – WorkoutLog</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body class="app-page">
+
+  <nav class="navbar">
+    <span class="nav-logo">WorkoutLog</span>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Dashboard</a>
+      <a href="/workouts" class="nav-link">Workouts</a>
+      <a href="/templates" class="nav-link">Templates</a>
+      <a href="/maxes" class="nav-link active">Maxes</a>
+    </div>
+    <div class="nav-right">
+      <span id="nav-username"></span>
+      <button class="btn btn-ghost unit-toggle" title="Switch weight units">lbs</button>
+      <button id="logout-btn" class="btn btn-ghost">Logout</button>
+    </div>
+  </nav>
+
+  <main class="container" style="max-width:640px">
+    <div class="page-header">
+      <h2>Training Maxes</h2>
+      <button class="btn btn-primary" id="show-add-btn">+ Add Max</button>
+    </div>
+
+    <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:1.25rem">
+      Your training max is the weight used for percentage-based programming. Set it manually — it is never auto-overwritten by logged performance.
+    </p>
+
+    <!-- Add / edit form -->
+    <div class="dash-card hidden" id="add-max-card" style="margin-bottom:1rem">
+      <h3 class="dash-card-title" id="add-form-title">Add Training Max</h3>
+      <input type="hidden" id="edit-max-id" />
+      <div class="log-meta-grid">
+        <div class="form-group">
+          <label>Exercise</label>
+          <div class="autocomplete-wrapper">
+            <input id="add-max-name" type="text" placeholder="Search exercise…" autocomplete="off" />
+            <ul class="autocomplete-list hidden" id="add-max-ac"></ul>
+          </div>
+          <input type="hidden" id="add-max-exercise-id" />
+        </div>
+        <div class="form-group">
+          <label id="add-max-weight-label">Training Max (lbs)</label>
+          <input id="add-max-weight" type="number" min="0" step="2.5" placeholder="275" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <input id="add-max-notes" type="text" placeholder="e.g. Based on recent 1RM test" />
+      </div>
+      <p id="add-max-error" class="form-error hidden"></p>
+      <div class="modal-actions" style="margin-top:.5rem">
+        <button class="btn btn-ghost" id="cancel-add-btn">Cancel</button>
+        <button class="btn btn-primary" id="save-max-btn">Save</button>
+      </div>
+    </div>
+
+    <!-- Maxes table -->
+    <div class="dash-card">
+      <div id="maxes-content"><p class="text-muted" style="padding:.5rem 0">Loading…</p></div>
+    </div>
+  </main>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    if (!localStorage.getItem("token")) window.location.href = "/login";
+    document.getElementById("nav-username").textContent = localStorage.getItem("username") || "";
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      localStorage.clear(); window.location.href = "/login";
+    });
+
+    let maxes = [];
+
+    async function loadMaxes() {
+      maxes = await api("/api/training-maxes/");
+      renderMaxes();
+    }
+
+    function renderMaxes() {
+      const el = document.getElementById("maxes-content");
+      if (!maxes.length) {
+        el.innerHTML = '<p class="text-muted" style="padding:.5rem 0">No training maxes set. Add one to enable percentage-based programming.</p>';
+        return;
+      }
+      el.innerHTML = `
+        <table class="pr-table">
+          <thead><tr><th>Exercise</th><th>Training Max</th><th>Notes</th><th></th></tr></thead>
+          <tbody>
+            ${maxes.map(m => `
+              <tr id="max-row-${m.id}">
+                <td>${escapeHtml(m.exercise_name)}</td>
+                <td class="pr-weight">${displayWeight(m.training_max_weight)}</td>
+                <td style="color:var(--text-muted);font-size:.85rem">${escapeHtml(m.notes || "—")}</td>
+                <td style="text-align:right;white-space:nowrap">
+                  <button class="btn btn-ghost btn-sm edit-max-btn" data-id="${m.id}">Edit</button>
+                  <button class="btn-icon delete-max-btn" data-id="${m.id}" title="Delete">&times;</button>
+                </td>
+              </tr>`).join("")}
+          </tbody>
+        </table>`;
+      document.querySelectorAll(".delete-max-btn").forEach(btn =>
+        btn.addEventListener("click", async () => {
+          if (!confirm("Delete this training max?")) return;
+          await api(`/api/training-maxes/${btn.dataset.id}`, "DELETE");
+          await loadMaxes();
+        })
+      );
+      document.querySelectorAll(".edit-max-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const m = maxes.find(x => x.id === parseInt(btn.dataset.id));
+          if (!m) return;
+          document.getElementById("add-form-title").textContent = "Edit Training Max";
+          document.getElementById("edit-max-id").value = m.id;
+          document.getElementById("add-max-name").value = m.exercise_name;
+          document.getElementById("add-max-exercise-id").value = m.exercise_id;
+          document.getElementById("add-max-weight").value = toDisplayWeight(m.training_max_weight);
+          document.getElementById("add-max-notes").value = m.notes || "";
+          document.getElementById("add-max-error").classList.add("hidden");
+          document.getElementById("add-max-card").classList.remove("hidden");
+          document.getElementById("show-add-btn").classList.add("hidden");
+        });
+      });
+    }
+
+    // Show/hide add form
+    document.getElementById("show-add-btn").addEventListener("click", () => {
+      document.getElementById("add-form-title").textContent = "Add Training Max";
+      document.getElementById("edit-max-id").value = "";
+      document.getElementById("add-max-name").value = "";
+      document.getElementById("add-max-exercise-id").value = "";
+      document.getElementById("add-max-weight").value = "";
+      document.getElementById("add-max-notes").value = "";
+      document.getElementById("add-max-error").classList.add("hidden");
+      document.getElementById("add-max-card").classList.remove("hidden");
+      document.getElementById("show-add-btn").classList.add("hidden");
+    });
+
+    document.getElementById("cancel-add-btn").addEventListener("click", () => {
+      document.getElementById("add-max-card").classList.add("hidden");
+      document.getElementById("show-add-btn").classList.remove("hidden");
+    });
+
+    document.getElementById("save-max-btn").addEventListener("click", async () => {
+      const errEl = document.getElementById("add-max-error");
+      const exerciseId = parseInt(document.getElementById("add-max-exercise-id").value);
+      const weightDisplay = parseFloat(document.getElementById("add-max-weight").value);
+      const weight = fromInputWeight(weightDisplay) || weightDisplay;
+      if (!exerciseId) { errEl.textContent = "Select an exercise from the list."; errEl.classList.remove("hidden"); return; }
+      if (!weight) { errEl.textContent = "Enter a weight."; errEl.classList.remove("hidden"); return; }
+      errEl.classList.add("hidden");
+      try {
+        await api("/api/training-maxes/", "POST", {
+          exercise_id: exerciseId,
+          training_max_weight: weight,
+          notes: document.getElementById("add-max-notes").value.trim() || null,
+        });
+        document.getElementById("add-max-card").classList.add("hidden");
+        document.getElementById("show-add-btn").classList.remove("hidden");
+        await loadMaxes();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove("hidden");
+      }
+    });
+
+    // Autocomplete using shared library helper
+    attachLibraryAutocomplete(
+      document.getElementById("add-max-name"),
+      document.getElementById("add-max-ac"),
+      item => { document.getElementById("add-max-exercise-id").value = item.id; }
+    );
+
+    initUnitToggle(() => loadMaxes());
+    loadMaxes();
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from backend.services import workout_service
+from backend.services import workout_service, template_service
 
 workouts_bp = Blueprint("workouts", __name__, url_prefix="/api/workouts")
 
@@ -44,6 +44,46 @@ def update_workout(workout_id):
     data = request.get_json()
     workout = workout_service.update_workout(workout, data)
     return jsonify(workout.to_dict())
+
+
+@workouts_bp.post("/<int:workout_id>/complete")
+@jwt_required()
+def complete_workout(workout_id):
+    user_id = int(get_jwt_identity())
+    workout = workout_service.get_workout(workout_id, user_id)
+    if not workout:
+        return jsonify({"error": "Workout not found"}), 404
+    data = request.get_json() or {}
+    workout = workout_service.complete_workout(workout, data.get("duration_minutes"))
+    return jsonify(workout.to_dict())
+
+
+@workouts_bp.post("/<int:workout_id>/copy")
+@jwt_required()
+def copy_workout(workout_id):
+    """Copy a prior session into a new planned session."""
+    user_id = int(get_jwt_identity())
+    source = workout_service.get_workout(workout_id, user_id)
+    if not source:
+        return jsonify({"error": "Workout not found"}), 404
+    data = request.get_json() or {}
+    new_session = template_service.copy_session(source, user_id, data.get("date"))
+    return jsonify(new_session.to_dict()), 201
+
+
+@workouts_bp.post("/<int:workout_id>/save-as-template")
+@jwt_required()
+def save_as_template(workout_id):
+    user_id = int(get_jwt_identity())
+    workout = workout_service.get_workout(workout_id, user_id)
+    if not workout:
+        return jsonify({"error": "Workout not found"}), 404
+    data = request.get_json() or {}
+    name = data.get("name") or workout.title
+    template = template_service.create_template_from_workout(
+        user_id, workout, name, data.get("description")
+    )
+    return jsonify(template.to_dict(include_exercises=True)), 201
 
 
 @workouts_bp.delete("/<int:workout_id>")

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log Workout – WorkoutLog</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body class="app-page">
+
+  <nav class="navbar">
+    <span class="nav-logo">WorkoutLog</span>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Dashboard</a>
+      <a href="/workouts" class="nav-link">Workouts</a>
+      <a href="/templates" class="nav-link">Templates</a>
+      <a href="/maxes" class="nav-link">Maxes</a>
+    </div>
+    <div class="nav-right">
+      <span id="nav-username"></span>
+      <button class="btn btn-ghost unit-toggle" title="Switch weight units">lbs</button>
+      <button id="logout-btn" class="btn btn-ghost">Logout</button>
+    </div>
+  </nav>
+
+  <main class="container" style="max-width:720px">
+    <div class="page-header">
+      <h2>Log Workout</h2>
+    </div>
+
+    <div class="dash-card" style="margin-bottom:1rem">
+      <div class="log-meta-grid">
+        <div class="form-group">
+          <label for="log-date">Date</label>
+          <input id="log-date" type="date" required />
+        </div>
+        <div class="form-group">
+          <label for="log-title">Title <span class="required">*</span></label>
+          <input id="log-title" type="text" placeholder="e.g. 5x5 — Workout A" required />
+        </div>
+        <div class="form-group">
+          <label for="log-duration">Duration (min)</label>
+          <input id="log-duration" type="number" min="1" placeholder="60" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="log-notes">Notes</label>
+        <textarea id="log-notes" rows="2" placeholder="How did it go?"></textarea>
+      </div>
+    </div>
+
+    <div class="page-header" style="margin-bottom:.75rem">
+      <h3 style="font-size:1.1rem;font-weight:700">Exercises</h3>
+      <button class="btn btn-ghost" id="add-exercise-btn">+ Add Exercise</button>
+    </div>
+
+    <div id="exercise-builder"></div>
+
+    <p id="log-error" class="form-error hidden" style="margin-top:.5rem"></p>
+
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:1rem;margin-top:1.5rem;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:.4rem;font-size:.88rem;color:var(--text-muted);cursor:pointer">
+        <input type="checkbox" id="save-as-template-chk" style="width:auto;accent-color:var(--accent)" />
+        Save as template
+      </label>
+      <a href="/workouts" class="btn btn-ghost">Cancel</a>
+      <button class="btn btn-primary" id="save-log-btn">Save Workout</button>
+    </div>
+  </main>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    if (!localStorage.getItem("token")) window.location.href = "/login";
+    document.getElementById("nav-username").textContent = localStorage.getItem("username") || "";
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      localStorage.clear(); window.location.href = "/login";
+    });
+
+    // Exercise library is loaded from the API via attachLibraryAutocomplete (main.js)
+
+    // Pre-fill date from query param or today
+    const params = new URLSearchParams(location.search);
+    const dateParam = params.get("date");
+    const todayStr = new Date().toISOString().slice(0, 10);
+    document.getElementById("log-date").value = dateParam || todayStr;
+
+    // State
+    let exercises = [];       // [{uid, exercise_library_id, name, notes, sets:[{set_type,reps,weight_lb,percent}]}]
+    let trainingMaxMap = {};  // exercise_library_id -> weight
+    let acTargetUid = null;
+
+    async function loadMaxes() {
+      const maxes = await api("/api/training-maxes/");
+      trainingMaxMap = {};
+      maxes.forEach(m => { trainingMaxMap[m.exercise_id] = m.training_max_weight; });
+    }
+
+    function newExercise() {
+      return {
+        uid: Date.now() + Math.random(),
+        exercise_library_id: null,
+        name: "", notes: "",
+        sets: [
+          {set_type:"working",reps:5,weight_lb:null,percent:null},
+          {set_type:"working",reps:5,weight_lb:null,percent:null},
+          {set_type:"working",reps:5,weight_lb:null,percent:null},
+          {set_type:"working",reps:5,weight_lb:null,percent:null},
+          {set_type:"working",reps:5,weight_lb:null,percent:null},
+        ],
+      };
+    }
+
+    function renderBuilder() {
+      const container = document.getElementById("exercise-builder");
+      container.innerHTML = exercises.map(ex => renderExCard(ex)).join("");
+      exercises.forEach(ex => attachExCardListeners(ex.uid));
+    }
+
+    const SET_TYPES = ["working", "warmup", "amrap", "emom", "failure"];
+
+    function renderExCard(ex) {
+      const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
+      const maxBadge = maxW ? `<span class="max-badge">TM: ${displayWeight(maxW)}</span>` : "";
+      const setsHtml = ex.sets.map((s, i) => {
+        const pct = (maxW && s.weight_lb) ? Math.round(s.weight_lb / maxW * 100) : (s.percent || "");
+        const typeOpts = SET_TYPES.map(t =>
+          `<option value="${t}"${s.set_type===t?" selected":""}>${t}</option>`).join("");
+        return `
+          <div class="set-row" data-uid="${ex.uid}" data-idx="${i}">
+            <span class="set-num">${i+1}</span>
+            <select class="set-type-sel" style="font-size:.75rem;padding:.25rem .3rem">${typeOpts}</select>
+            <input type="number" class="set-reps" value="${s.reps||""}" min="1" placeholder="reps" />
+            <input type="number" class="set-lb" value="${s.weight_lb != null ? toDisplayWeight(s.weight_lb) : ""}" min="0" step="${weightInputStep()}" placeholder="${unitLabel()}" />
+            <div class="pct-input-wrapper${!maxW ? " disabled" : ""}">
+              <input type="number" class="set-pct" value="${pct}" min="1" max="200" step="5" placeholder="${maxW ? "e.g. 75" : "—"}" ${!maxW ? 'disabled title="Set a training max first"' : ""} />
+            </div>
+            <button type="button" class="btn-icon remove-set-btn">&times;</button>
+          </div>`;
+      }).join("");
+
+      return `
+        <div class="log-exercise-card" id="excard-${ex.uid}">
+          <div class="log-exercise-header">
+            <div style="flex:1;min-width:0">
+              <div class="autocomplete-wrapper">
+                <input type="text" class="ex-name-input" data-uid="${ex.uid}" value="${escapeHtml(ex.name)}" placeholder="Search exercise…" autocomplete="off" />
+                <ul class="autocomplete-list hidden" id="ac-${ex.uid}"></ul>
+              </div>
+              ${maxBadge ? `<div class="exercise-max-row" style="margin-top:.3rem">${maxBadge}${maxW ? `<span class="pct-quick-btns">${[65,70,75,80,85,90,95].map(p=>`<button type="button" class="pct-quick-btn" data-uid="${ex.uid}" data-pct="${p}">${p}%</button>`).join("")}</span>` : ""}</div>` : ""}
+            </div>
+            <button type="button" class="btn-icon remove-ex-btn" data-uid="${ex.uid}" title="Remove exercise" style="margin-left:.5rem;font-size:1.2rem">&times;</button>
+          </div>
+          <div class="sets-col-headers" style="margin-top:.5rem">
+            <span>#</span><span>Type</span><span>Reps</span><span>Weight (lbs)</span><span>% of TM</span><span></span>
+          </div>
+          <div class="ex-sets-container" id="sets-${ex.uid}">${setsHtml}</div>
+          <div style="margin-top:.4rem">
+            <button type="button" class="btn btn-ghost btn-sm add-set-btn" data-uid="${ex.uid}">+ Add Set</button>
+          </div>
+          <div class="form-group" style="margin-top:.75rem;margin-bottom:0">
+            <input type="text" class="ex-notes-input" data-uid="${ex.uid}" value="${escapeHtml(ex.notes||"")}" placeholder="Notes (optional)" />
+          </div>
+        </div>`;
+    }
+
+    function attachExCardListeners(uid) {
+      const ex = exercises.find(e => e.uid === uid);
+      if (!ex) return;
+
+      const card = document.getElementById(`excard-${uid}`);
+      card.querySelector(".remove-ex-btn").addEventListener("click", () => {
+        exercises = exercises.filter(e => e.uid !== uid);
+        renderBuilder();
+      });
+
+      // Name + autocomplete using library API
+      const nameInput = card.querySelector(".ex-name-input");
+      const acList = document.getElementById(`ac-${uid}`);
+      attachLibraryAutocomplete(nameInput, acList, item => {
+        ex.name = item.name;
+        ex.exercise_library_id = item.id;
+        updateMaxBadge(uid);
+      });
+      nameInput.addEventListener("input", () => { ex.name = nameInput.value; });
+
+      // Notes
+      card.querySelector(".ex-notes-input").addEventListener("input", e => { ex.notes = e.target.value; });
+
+      // Quick-percent buttons: apply chosen % to ALL sets at once
+      card.querySelectorAll(".pct-quick-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const pct = parseInt(btn.dataset.pct);
+          const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
+          if (!maxW) return;
+          ex.sets.forEach(s => {
+            s.percent = pct;
+            s.weight_lb = Math.round(maxW * pct / 100 / 2.5) * 2.5;
+          });
+          reRenderSets(uid);
+        });
+      });
+
+      // Add set
+      card.querySelector(".add-set-btn").addEventListener("click", () => {
+        const last = ex.sets[ex.sets.length - 1];
+        ex.sets.push({
+          set_type: last ? last.set_type : "working",
+          reps: last ? last.reps : 5,
+          weight_lb: last ? last.weight_lb : null,
+          percent: null,
+        });
+        reRenderSets(uid);
+      });
+
+      attachSetListeners(uid);
+    }
+
+    function attachSetListeners(uid) {
+      const ex = exercises.find(e => e.uid === uid);
+      const container = document.getElementById(`sets-${uid}`);
+      const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
+
+      container.querySelectorAll(".set-type-sel").forEach((sel, i) => {
+        sel.addEventListener("change", () => { ex.sets[i].set_type = sel.value; });
+      });
+      container.querySelectorAll(".set-reps").forEach((inp, i) => {
+        inp.addEventListener("input", () => { ex.sets[i].reps = parseInt(inp.value) || null; });
+      });
+      container.querySelectorAll(".set-lb").forEach((inp, i) => {
+        inp.addEventListener("input", () => {
+          ex.sets[i].weight_lb = fromInputWeight(inp.value);
+          if (maxW && ex.sets[i].weight_lb) {
+            container.querySelectorAll(".set-pct")[i].value = Math.round(ex.sets[i].weight_lb / maxW * 100);
+          } else {
+            container.querySelectorAll(".set-pct")[i].value = "";
+          }
+        });
+      });
+      container.querySelectorAll(".set-pct").forEach((inp, i) => {
+        inp.addEventListener("input", () => {
+          const pct = parseFloat(inp.value);
+          if (maxW && pct) {
+            const lb = Math.round(maxW * pct / 100 / 2.5) * 2.5;
+            ex.sets[i].weight_lb = lb;
+            container.querySelectorAll(".set-lb")[i].value = toDisplayWeight(lb);
+          }
+          ex.sets[i].percent = pct || null;
+        });
+      });
+      container.querySelectorAll(".remove-set-btn").forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+          ex.sets.splice(i, 1);
+          reRenderSets(uid);
+        });
+      });
+    }
+
+    function reRenderSets(uid) {
+      const ex = exercises.find(e => e.uid === uid);
+      const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
+      const container = document.getElementById(`sets-${uid}`);
+      container.innerHTML = ex.sets.map((s, i) => {
+        const pct = (maxW && s.weight_lb) ? Math.round(s.weight_lb / maxW * 100) : (s.percent || "");
+        const typeOpts = SET_TYPES.map(t =>
+          `<option value="${t}"${s.set_type===t?" selected":""}>${t}</option>`).join("");
+        return `
+          <div class="set-row" data-uid="${uid}" data-idx="${i}">
+            <span class="set-num">${i+1}</span>
+            <select class="set-type-sel" style="font-size:.75rem;padding:.25rem .3rem">${typeOpts}</select>
+            <input type="number" class="set-reps" value="${s.reps||""}" min="1" placeholder="reps" />
+            <input type="number" class="set-lb" value="${s.weight_lb != null ? toDisplayWeight(s.weight_lb) : ""}" min="0" step="${weightInputStep()}" placeholder="${unitLabel()}" />
+            <div class="pct-input-wrapper${!maxW ? " disabled" : ""}">
+              <input type="number" class="set-pct" value="${pct}" min="1" max="200" step="5" placeholder="${maxW ? "e.g. 75" : "—"}" ${!maxW ? 'disabled' : ""} />
+            </div>
+            <button type="button" class="btn-icon remove-set-btn">&times;</button>
+          </div>`;
+      }).join("");
+      attachSetListeners(uid);
+    }
+
+    function updateMaxBadge(uid) {
+      const ex = exercises.find(e => e.uid === uid);
+      if (!ex) return;
+      const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
+      const card = document.getElementById(`excard-${uid}`);
+      let badgeRow = card.querySelector(".exercise-max-row");
+      if (maxW) {
+        if (!badgeRow) {
+          badgeRow = document.createElement("div");
+          badgeRow.className = "exercise-max-row";
+          badgeRow.style.marginTop = ".3rem";
+          card.querySelector(".autocomplete-wrapper").after(badgeRow);
+        }
+        badgeRow.innerHTML = `<span class="max-badge">TM: ${displayWeight(maxW)}</span><span class="pct-quick-btns">${[65,70,75,80,85,90,95].map(p=>`<button type="button" class="pct-quick-btn" data-uid="${uid}" data-pct="${p}">${p}%</button>`).join("")}</span>`;
+        badgeRow.querySelectorAll(".pct-quick-btn").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const pct = parseInt(btn.dataset.pct);
+            const mx = trainingMaxMap[ex.exercise_library_id];
+            if (!mx) return;
+            ex.sets.forEach(s => { s.percent = pct; s.weight_lb = Math.round(mx * pct / 100 / 2.5) * 2.5; });
+            reRenderSets(uid);
+          });
+        });
+      } else if (badgeRow) {
+        badgeRow.remove();
+      }
+      reRenderSets(uid);
+    }
+
+    document.getElementById("add-exercise-btn").addEventListener("click", () => {
+      exercises.push(newExercise());
+      renderBuilder();
+    });
+
+    document.getElementById("save-log-btn").addEventListener("click", async () => {
+      const errorEl = document.getElementById("log-error");
+      const title = document.getElementById("log-title").value.trim();
+      const dateVal = document.getElementById("log-date").value;
+      if (!title) { errorEl.textContent = "Title is required."; errorEl.classList.remove("hidden"); return; }
+      errorEl.classList.add("hidden");
+
+      try {
+        const workout = await api("/api/workouts/", "POST", {
+          title,
+          date: dateVal + "T12:00:00",
+          duration_minutes: Number(document.getElementById("log-duration").value) || null,
+          notes: document.getElementById("log-notes").value || null,
+        });
+
+        for (const ex of exercises) {
+          if (!ex.name.trim()) continue;
+          const sets = ex.sets.filter(s => s.reps || s.weight_lb).map((s, i) => ({
+            set_number: i + 1,
+            set_type: s.set_type || "working",
+            reps: s.reps,
+            weight_lb: s.weight_lb,
+            percent: s.percent || null,
+          }));
+          if (!sets.length) continue;
+          await api(`/api/workouts/${workout.id}/exercises`, "POST", {
+            name: ex.name,
+            exercise_library_id: ex.exercise_library_id || null,
+            notes: ex.notes || null,
+            sets,
+          });
+        }
+
+        if (document.getElementById("save-as-template-chk").checked) {
+          await api(`/api/workouts/${workout.id}/save-as-template`, "POST", { name: title });
+        }
+        window.location.href = "/workouts";
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove("hidden");
+      }
+    });
+
+    initUnitToggle(() => renderBuilder());
+    loadMaxes().then(() => {
+      exercises.push(newExercise());
+      renderBuilder();
+    });
+  </script>
+</body>
+</html>

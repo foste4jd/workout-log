@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workout – WorkoutLog</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <style>
+    /* ── Session-specific mobile styles ─────────────────────────── */
+    .session-header {
+      padding: 1rem 1rem 0;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .session-header-top {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: .25rem;
+    }
+    .session-back {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 1.3rem;
+      line-height: 1;
+      padding: .25rem .1rem;
+    }
+    .session-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .session-meta {
+      font-size: .8rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      padding-left: 2.25rem;
+    }
+    .session-body {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 0 .75rem 6rem;
+    }
+
+    /* ── Exercise block ──────────────────────────────────────────── */
+    .ex-block {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .ex-block-header {
+      display: flex;
+      align-items: center;
+      padding: .75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      gap: .5rem;
+    }
+    .ex-block-name {
+      font-weight: 700;
+      font-size: 1rem;
+      flex: 1;
+    }
+    .ex-block-tm {
+      font-size: .75rem;
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      padding: .2rem .5rem;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .ex-block-notes {
+      font-size: .8rem;
+      color: var(--text-muted);
+      padding: .4rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Set rows ────────────────────────────────────────────────── */
+    .set-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .set-item {
+      display: flex;
+      align-items: center;
+      padding: .7rem 1rem;
+      gap: .6rem;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .set-item:last-child { border-bottom: none; }
+    .set-item:active { background: var(--border); }
+    .set-item.done {
+      opacity: .55;
+    }
+    .set-item.done .set-check { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .set-check {
+      width: 2rem;
+      height: 2rem;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: .9rem;
+      color: transparent;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .set-type-badge {
+      font-size: .65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: .15rem .4rem;
+      border-radius: 4px;
+      min-width: 3rem;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .badge-warmup   { background: #1e3a5f; color: #60a5fa; }
+    .badge-working  { background: #14532d; color: #4ade80; }
+    .badge-amrap    { background: #431407; color: #fb923c; }
+    .badge-emom     { background: #2e1065; color: #c084fc; }
+    .badge-failure  { background: #450a0a; color: #f87171; }
+
+    .set-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: .1rem;
+      min-width: 0;
+    }
+    .set-main {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .set-sub {
+      font-size: .75rem;
+      color: var(--text-muted);
+    }
+    .set-edit-hint {
+      font-size: .7rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* ── Add set / exercise ──────────────────────────────────────── */
+    .ex-block-footer {
+      padding: .5rem 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Bottom action bar ───────────────────────────────────────── */
+    .session-action-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+      padding: .75rem 1rem;
+      display: flex;
+      gap: .75rem;
+      justify-content: center;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    /* Make the action bar respect the centered max-width */
+    @media (min-width: 641px) {
+      .session-action-bar {
+        left: 50%;
+        transform: translateX(-50%);
+        width: 640px;
+        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+      }
+    }
+
+    /* ── Bottom sheet overlay ────────────────────────────────────── */
+    .sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+    }
+    .sheet-overlay.hidden { display: none; }
+    .sheet {
+      background: var(--card-bg);
+      border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 1.25rem 1rem 2rem;
+    }
+    .sheet-drag {
+      width: 3rem;
+      height: .25rem;
+      background: var(--border);
+      border-radius: 99px;
+      margin: 0 auto 1rem;
+    }
+    .sheet-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    .sheet-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .sheet-fields .form-group { margin: 0; }
+    .sheet-fields label { font-size: .8rem; }
+    .sheet-type-row {
+      margin-bottom: 1rem;
+    }
+    .sheet-type-row label { font-size: .8rem; display: block; margin-bottom: .3rem; }
+    .type-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .4rem;
+    }
+    .type-pill {
+      padding: .35rem .7rem;
+      border-radius: 99px;
+      font-size: .75rem;
+      font-weight: 600;
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-muted);
+      text-transform: capitalize;
+    }
+    .type-pill.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+  </style>
+</head>
+<body class="app-page">
+
+  <!-- Session header -->
+  <div class="session-header">
+    <div class="session-header-top">
+      <a href="/workouts" class="session-back">&#8592;</a>
+      <span class="session-title" id="session-title">Loading…</span>
+      <span id="session-status-badge"></span>
+      <button class="btn btn-ghost btn-sm unit-toggle" title="Switch weight units" style="margin-left:auto">lbs</button>
+    </div>
+    <div class="session-meta" id="session-meta"></div>
+  </div>
+
+  <!-- Exercise blocks -->
+  <div class="session-body" id="session-body">
+    <p class="text-muted">Loading workout…</p>
+  </div>
+
+  <!-- Fixed bottom bar -->
+  <div class="session-action-bar">
+    <button class="btn btn-ghost" id="add-ex-btn">+ Add Exercise</button>
+    <button class="btn btn-primary" id="complete-btn">Complete Workout</button>
+  </div>
+
+  <!-- Set edit bottom sheet -->
+  <div class="sheet-overlay hidden" id="set-sheet">
+    <div class="sheet">
+      <div class="sheet-drag"></div>
+      <div class="sheet-title" id="sheet-title">Edit Set</div>
+      <div class="sheet-type-row">
+        <label>Type</label>
+        <div class="type-pills" id="sheet-type-pills">
+          <button class="type-pill active" data-type="working">Working</button>
+          <button class="type-pill" data-type="warmup">Warmup</button>
+          <button class="type-pill" data-type="amrap">AMRAP</button>
+          <button class="type-pill" data-type="emom">EMOM</button>
+          <button class="type-pill" data-type="failure">Failure</button>
+        </div>
+      </div>
+      <div class="sheet-fields">
+        <div class="form-group">
+          <label>Reps</label>
+          <input type="number" id="sheet-reps" min="1" placeholder="5" />
+        </div>
+        <div class="form-group">
+          <label id="sheet-weight-label">Weight (lbs)</label>
+          <input type="number" id="sheet-weight" min="0" step="2.5" placeholder="135" />
+        </div>
+        <div class="form-group">
+          <label>% of Training Max</label>
+          <input type="number" id="sheet-pct" min="1" max="200" placeholder="75" />
+        </div>
+        <div class="form-group">
+          <label>Duration (sec)</label>
+          <input type="number" id="sheet-duration" min="1" placeholder="—" />
+        </div>
+      </div>
+      <p id="sheet-error" class="form-error hidden"></p>
+      <div style="display:flex;gap:.75rem">
+        <button class="btn btn-ghost" style="flex:1" id="sheet-cancel-btn">Cancel</button>
+        <button class="btn btn-ghost" style="flex:1;color:var(--accent)" id="sheet-done-btn">Mark Done</button>
+        <button class="btn btn-primary" style="flex:1" id="sheet-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add exercise bottom sheet -->
+  <div class="sheet-overlay hidden" id="ex-sheet">
+    <div class="sheet">
+      <div class="sheet-drag"></div>
+      <div class="sheet-title">Add Exercise</div>
+      <div class="form-group">
+        <label>Exercise</label>
+        <div class="autocomplete-wrapper">
+          <input id="ex-sheet-search" type="text" placeholder="Search exercises…" autocomplete="off" />
+          <ul class="autocomplete-list hidden" id="ex-sheet-ac"></ul>
+        </div>
+      </div>
+      <p id="ex-sheet-error" class="form-error hidden"></p>
+      <div style="display:flex;gap:.75rem;margin-top:.5rem">
+        <button class="btn btn-ghost" style="flex:1" id="ex-sheet-cancel">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" id="ex-sheet-add">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    if (!localStorage.getItem("token")) window.location.href = "/login";
+
+    const WORKOUT_ID = {{ workout_id }};
+    let workout = null;
+    let exercises = [];
+    let trainingMaxMap = {};   // exercise_library_id → weight
+    let libraryMap = {};       // id → {name, category}
+    let library = [];
+    let activeSetId = null;
+    let activeExLibId = null;  // for % ↔ weight conversion in sheet
+    let exSheetSelected = null; // {id, name} from library
+
+    // ── Boot ──────────────────────────────────────────────────────
+    async function boot() {
+      try {
+        const [w, exList, maxes, lib] = await Promise.all([
+          api(`/api/workouts/${WORKOUT_ID}`),
+          api(`/api/workouts/${WORKOUT_ID}/exercises`),
+          api("/api/training-maxes/"),
+          api("/api/library/"),
+        ]);
+        workout = w;
+        exercises = exList;
+        maxes.forEach(m => { trainingMaxMap[m.exercise_id] = m.training_max_weight; });
+        lib.forEach(e => { libraryMap[e.id] = e; });
+        library = lib;
+        render();
+      } catch (err) {
+        document.getElementById("session-body").innerHTML =
+          `<p class="form-error">${err.message}</p>`;
+      }
+    }
+
+    function render() {
+      // Header
+      document.getElementById("session-title").textContent = workout.title;
+      document.getElementById("session-meta").textContent =
+        formatDate(workout.date) +
+        (workout.duration_minutes ? `  ·  ${workout.duration_minutes} min` : "");
+
+      const badge = document.getElementById("session-status-badge");
+      if (workout.status === "completed") {
+        badge.textContent = "Done";
+        badge.className = "max-badge";
+      } else if (workout.status === "planned") {
+        badge.textContent = "Planned";
+        badge.style.cssText = "font-size:.7rem;color:var(--text-muted)";
+      }
+
+      // Complete button
+      const completeBtn = document.getElementById("complete-btn");
+      if (workout.status === "completed") {
+        completeBtn.textContent = "Completed ✓";
+        completeBtn.disabled = true;
+        completeBtn.classList.replace("btn-primary", "btn-ghost");
+      }
+
+      // Body
+      const body = document.getElementById("session-body");
+      if (!exercises.length) {
+        body.innerHTML = '<p class="text-muted" style="padding:2rem 0 1rem">No exercises yet. Tap + Add Exercise to start.</p>';
+        return;
+      }
+      body.innerHTML = exercises.map(renderExBlock).join("");
+      attachExListeners();
+    }
+
+    function renderExBlock(ex) {
+      const tmWeight = trainingMaxMap[ex.exercise_library_id];
+      const tmBadge = tmWeight
+        ? `<span class="ex-block-tm">TM: ${displayWeight(tmWeight)}</span>` : "";
+      const noteHtml = ex.notes
+        ? `<div class="ex-block-notes">${escapeHtml(ex.notes)}</div>` : "";
+      const setsHtml = (ex.sets || []).map(s => renderSetItem(s, tmWeight)).join("");
+
+      return `
+        <div class="ex-block" id="exblock-${ex.id}">
+          <div class="ex-block-header">
+            <span class="ex-block-name">${escapeHtml(ex.name)}</span>
+            ${tmBadge}
+          </div>
+          ${noteHtml}
+          <ul class="set-list" id="setlist-${ex.id}">${setsHtml}</ul>
+          <div class="ex-block-footer">
+            <button class="btn btn-ghost btn-sm add-set-btn" data-ex-id="${ex.id}">+ Add Set</button>
+          </div>
+        </div>`;
+    }
+
+    function renderSetItem(s, tmWeight) {
+      const done = s.completed;
+      const typeClass = `badge-${s.set_type || "working"}`;
+      const typeLabel = s.set_type || "working";
+
+      let mainText = "";
+      if (s.duration_seconds) {
+        mainText = `${s.duration_seconds}s`;
+        if (s.weight_lb) mainText += ` @ ${displayWeight(s.weight_lb)}`;
+      } else {
+        const reps = s.reps ? `${s.reps} reps` : "—";
+        const wt   = s.weight_lb ? `${toDisplayWeight(s.weight_lb)} ${unitLabel()}` : "BW";
+        mainText = `${reps} × ${wt}`;
+      }
+
+      let subText = "";
+      if (s.percent && tmWeight) {
+        const calc = Math.round(tmWeight * s.percent / 100 / 2.5) * 2.5;
+        subText = `${s.percent}% TM → ${displayWeight(calc)}`;
+      } else if (s.percent) {
+        subText = `${s.percent}% TM`;
+      }
+
+      return `
+        <li class="set-item${done ? " done" : ""}" data-set-id="${s.id}" data-ex-lib-id="${s.exercise_library_id || ""}">
+          <div class="set-check">✓</div>
+          <span class="set-type-badge ${typeClass}">${typeLabel}</span>
+          <div class="set-info">
+            <span class="set-main">${mainText}</span>
+            ${subText ? `<span class="set-sub">${subText}</span>` : ""}
+          </div>
+          <span class="set-edit-hint">Edit</span>
+        </li>`;
+    }
+
+    function attachExListeners() {
+      document.querySelectorAll(".set-item").forEach(li => {
+        li.addEventListener("click", () => openSetSheet(parseInt(li.dataset.setId)));
+      });
+      document.querySelectorAll(".add-set-btn").forEach(btn => {
+        btn.addEventListener("click", () => addSet(parseInt(btn.dataset.exId)));
+      });
+    }
+
+    // ── Set sheet ────────────────────────────────────────────────
+    function openSetSheet(setId) {
+      activeSetId = setId;
+      const set = findSet(setId);
+      if (!set) return;
+
+      const ex = exercises.find(e => e.sets && e.sets.some(s => s.id === setId));
+      activeExLibId = ex ? ex.exercise_library_id : null;
+
+      document.getElementById("sheet-title").textContent =
+        `Set ${set.set_number}${ex ? " — " + ex.name : ""}`;
+      document.getElementById("sheet-reps").value = set.reps || "";
+      document.getElementById("sheet-weight").value = set.weight_lb ? toDisplayWeight(set.weight_lb) : "";
+      const wLabel = document.getElementById("sheet-weight-label");
+      if (wLabel) wLabel.textContent = `Weight (${unitLabel()})`;
+      document.getElementById("sheet-pct").value = set.percent || "";
+      document.getElementById("sheet-duration").value = set.duration_seconds || "";
+      document.getElementById("sheet-error").classList.add("hidden");
+
+      // Type pills
+      document.querySelectorAll(".type-pill").forEach(p => {
+        p.classList.toggle("active", p.dataset.type === (set.set_type || "working"));
+      });
+
+      document.getElementById("set-sheet").classList.remove("hidden");
+    }
+
+    function closeSetSheet() {
+      document.getElementById("set-sheet").classList.add("hidden");
+      activeSetId = null;
+    }
+
+    document.getElementById("sheet-cancel-btn").addEventListener("click", closeSetSheet);
+    document.getElementById("set-sheet").addEventListener("click", e => {
+      if (e.target === document.getElementById("set-sheet")) closeSetSheet();
+    });
+
+    // Type pill selection
+    document.querySelectorAll(".type-pill").forEach(p => {
+      p.addEventListener("click", () => {
+        document.querySelectorAll(".type-pill").forEach(x => x.classList.remove("active"));
+        p.classList.add("active");
+      });
+    });
+
+    // % ↔ weight cross-fill
+    document.getElementById("sheet-pct").addEventListener("input", () => {
+      const pct = parseFloat(document.getElementById("sheet-pct").value);
+      const tm = activeExLibId ? trainingMaxMap[activeExLibId] : null;
+      if (tm && pct) {
+        document.getElementById("sheet-weight").value =
+          toDisplayWeight(Math.round(tm * pct / 100 / 2.5) * 2.5);
+      }
+    });
+    document.getElementById("sheet-weight").addEventListener("input", () => {
+      const wt = fromInputWeight(document.getElementById("sheet-weight").value);
+      const tm = activeExLibId ? trainingMaxMap[activeExLibId] : null;
+      if (tm && wt) {
+        document.getElementById("sheet-pct").value = Math.round(wt / tm * 100);
+      }
+    });
+
+    // Save (no complete)
+    document.getElementById("sheet-save-btn").addEventListener("click", async () => {
+      await patchSet(false);
+    });
+
+    // Mark done (save + complete)
+    document.getElementById("sheet-done-btn").addEventListener("click", async () => {
+      await patchSet(true);
+    });
+
+    async function patchSet(markDone) {
+      const errEl = document.getElementById("sheet-error");
+      const activeType = document.querySelector(".type-pill.active")?.dataset.type || "working";
+      const payload = {
+        set_type: activeType,
+        reps: parseInt(document.getElementById("sheet-reps").value) || null,
+        weight_lb: fromInputWeight(document.getElementById("sheet-weight").value),
+        percent: parseFloat(document.getElementById("sheet-pct").value) || null,
+        duration_seconds: parseInt(document.getElementById("sheet-duration").value) || null,
+      };
+      if (markDone) payload.completed = true;
+
+      try {
+        const updated = await api(`/api/session-sets/${activeSetId}`, "PATCH", payload);
+        // Update local state
+        exercises.forEach(ex => {
+          if (ex.sets) {
+            const idx = ex.sets.findIndex(s => s.id === activeSetId);
+            if (idx !== -1) ex.sets[idx] = { ...ex.sets[idx], ...updated };
+          }
+        });
+        closeSetSheet();
+        refreshSetList();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove("hidden");
+      }
+    }
+
+    function refreshSetList() {
+      exercises.forEach(ex => {
+        const ul = document.getElementById(`setlist-${ex.id}`);
+        if (!ul) return;
+        const tmWeight = trainingMaxMap[ex.exercise_library_id];
+        ul.innerHTML = (ex.sets || []).map(s => renderSetItem(s, tmWeight)).join("");
+      });
+      attachExListeners();
+    }
+
+    // ── Add set ───────────────────────────────────────────────────
+    async function addSet(exId) {
+      const ex = exercises.find(e => e.id === exId);
+      if (!ex) return;
+      const lastSet = ex.sets && ex.sets.length ? ex.sets[ex.sets.length - 1] : null;
+      const newSets = (ex.sets || []).map(s => ({
+        set_type: s.set_type,
+        reps: s.reps,
+        weight_lb: s.weight_lb,
+        percent: s.percent,
+        duration_seconds: s.duration_seconds,
+        completed: s.completed,
+      }));
+      newSets.push({
+        set_type: lastSet ? lastSet.set_type : "working",
+        reps: lastSet ? lastSet.reps : null,
+        weight_lb: lastSet ? lastSet.weight_lb : null,
+        percent: lastSet ? lastSet.percent : null,
+        completed: false,
+      });
+      try {
+        const updated = await api(`/api/exercises/${exId}`, "PUT", {
+          name: ex.name,
+          sets: newSets,
+        });
+        ex.sets = updated.sets;
+        refreshSetList();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // ── Add exercise sheet ────────────────────────────────────────
+    document.getElementById("add-ex-btn").addEventListener("click", () => {
+      exSheetSelected = null;
+      document.getElementById("ex-sheet-search").value = "";
+      document.getElementById("ex-sheet-ac").classList.add("hidden");
+      document.getElementById("ex-sheet-error").classList.add("hidden");
+      document.getElementById("ex-sheet").classList.remove("hidden");
+      setTimeout(() => document.getElementById("ex-sheet-search").focus(), 50);
+    });
+
+    document.getElementById("ex-sheet-cancel").addEventListener("click", () => {
+      document.getElementById("ex-sheet").classList.add("hidden");
+    });
+    document.getElementById("ex-sheet").addEventListener("click", e => {
+      if (e.target === document.getElementById("ex-sheet")) {
+        document.getElementById("ex-sheet").classList.add("hidden");
+      }
+    });
+
+    // Autocomplete for add-exercise sheet
+    const exSearch = document.getElementById("ex-sheet-search");
+    const exAcList = document.getElementById("ex-sheet-ac");
+
+    exSearch.addEventListener("input", () => {
+      const q = exSearch.value.trim().toLowerCase();
+      if (!q) { exAcList.classList.add("hidden"); exAcList.innerHTML = ""; return; }
+      const matches = library.filter(e => e.name.toLowerCase().includes(q)).slice(0, 10);
+      if (!matches.length) { exAcList.classList.add("hidden"); exAcList.innerHTML = ""; return; }
+      exAcList.innerHTML = matches.map(e =>
+        `<li class="autocomplete-item" data-id="${e.id}" data-name="${escapeHtml(e.name)}">${escapeHtml(e.name)} <small style="color:var(--text-muted)">${e.category}</small></li>`
+      ).join("");
+      exAcList.classList.remove("hidden");
+      exAcList.querySelectorAll(".autocomplete-item").forEach(li => {
+        li.addEventListener("mousedown", ev => {
+          ev.preventDefault();
+          exSheetSelected = { id: parseInt(li.dataset.id), name: li.dataset.name };
+          exSearch.value = li.dataset.name;
+          exAcList.classList.add("hidden");
+        });
+      });
+    });
+    exSearch.addEventListener("blur", () => setTimeout(() => exAcList.classList.add("hidden"), 150));
+
+    document.getElementById("ex-sheet-add").addEventListener("click", async () => {
+      const errEl = document.getElementById("ex-sheet-error");
+      const name = exSearch.value.trim();
+      if (!name) { errEl.textContent = "Select an exercise."; errEl.classList.remove("hidden"); return; }
+      errEl.classList.add("hidden");
+      try {
+        const newEx = await api(`/api/workouts/${WORKOUT_ID}/exercises`, "POST", {
+          name,
+          exercise_library_id: exSheetSelected ? exSheetSelected.id : null,
+          sets: [],
+        });
+        exercises.push(newEx);
+        document.getElementById("ex-sheet").classList.add("hidden");
+        render();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove("hidden");
+      }
+    });
+
+    // ── Complete workout ──────────────────────────────────────────
+    document.getElementById("complete-btn").addEventListener("click", async () => {
+      if (workout.status === "completed") return;
+      try {
+        const updated = await api(`/api/workouts/${WORKOUT_ID}/complete`, "POST", {});
+        workout = updated;
+        render();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    function findSet(setId) {
+      for (const ex of exercises) {
+        const s = (ex.sets || []).find(s => s.id === setId);
+        if (s) return s;
+      }
+      return null;
+    }
+
+    initUnitToggle(() => render());
+    boot();
+  </script>
+</body>
+</html>

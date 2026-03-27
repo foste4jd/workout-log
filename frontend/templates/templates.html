@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Templates – WorkoutLog</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <style>
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .template-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .template-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: .5rem;
+      margin-bottom: .5rem;
+    }
+    .template-card-name {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+    .template-card-desc {
+      font-size: .85rem;
+      color: var(--text-muted);
+      margin-bottom: .75rem;
+    }
+    .template-ex-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 .75rem;
+    }
+    .template-ex-item {
+      font-size: .85rem;
+      color: var(--text-muted);
+      padding: .2rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .template-ex-item:last-child { border-bottom: none; }
+    .template-ex-sets {
+      font-size: .75rem;
+      color: var(--text-muted);
+      margin-left: .5rem;
+    }
+    .template-actions {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+
+    /* ── Builder modal ─────────────────────────────────── */
+    .builder-ex-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: .75rem;
+      overflow: hidden;
+    }
+    .builder-ex-header {
+      display: flex;
+      align-items: center;
+      padding: .6rem .75rem;
+      gap: .5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .builder-ex-name {
+      flex: 1;
+      font-weight: 600;
+      font-size: .95rem;
+    }
+    .builder-set-row {
+      display: grid;
+      grid-template-columns: 1.5rem 4.5rem 1fr 1fr 1fr 1.5rem;
+      gap: .4rem;
+      align-items: center;
+      padding: .4rem .75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: .85rem;
+    }
+    .builder-set-row:last-child { border-bottom: none; }
+    .builder-set-row select {
+      font-size: .75rem;
+      padding: .25rem .3rem;
+    }
+    .builder-set-row input {
+      padding: .3rem .4rem;
+      font-size: .85rem;
+    }
+    .builder-col-headers {
+      display: grid;
+      grid-template-columns: 1.5rem 4.5rem 1fr 1fr 1fr 1.5rem;
+      gap: .4rem;
+      padding: .2rem .75rem;
+      font-size: .7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      border-bottom: 1px solid var(--border);
+    }
+    .builder-ex-footer {
+      padding: .4rem .75rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body class="app-page">
+
+  <nav class="navbar">
+    <span class="nav-logo">WorkoutLog</span>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Dashboard</a>
+      <a href="/workouts" class="nav-link">Workouts</a>
+      <a href="/templates" class="nav-link active">Templates</a>
+      <a href="/maxes" class="nav-link">Maxes</a>
+    </div>
+    <div class="nav-right">
+      <span id="nav-username"></span>
+      <button class="btn btn-ghost unit-toggle" title="Switch weight units">lbs</button>
+      <button id="logout-btn" class="btn btn-ghost">Logout</button>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <div class="page-header">
+      <h2>Templates</h2>
+      <button class="btn btn-primary" id="new-template-btn">+ New Template</button>
+    </div>
+
+    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:.5rem">
+      Build reusable workout templates with exercises, sets, reps, weights, and percentages. Start a workout from a template to create a planned session.
+    </p>
+
+    <div id="templates-container">
+      <p class="text-muted">Loading…</p>
+    </div>
+
+  </main>
+
+  <!-- Template builder modal -->
+  <div id="builder-overlay" class="modal-overlay hidden">
+    <div class="modal" style="max-width:680px;width:95vw;max-height:90vh;overflow-y:auto">
+      <div class="modal-header">
+        <h3 id="builder-modal-title">New Template</h3>
+        <button id="close-builder-btn" class="btn-icon">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label for="tpl-name">Template Name <span class="required">*</span></label>
+        <input id="tpl-name" type="text" placeholder="e.g. StrongLifts 5x5 — Workout A" />
+      </div>
+      <div class="form-group">
+        <label for="tpl-desc">Description</label>
+        <input id="tpl-desc" type="text" placeholder="Optional notes about this template" />
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:.75rem 0 .5rem">
+        <span style="font-weight:700;font-size:.95rem">Exercises</span>
+        <button class="btn btn-ghost btn-sm" id="builder-add-ex-btn">+ Add Exercise</button>
+      </div>
+
+      <div id="builder-exercises"></div>
+
+      <p id="builder-error" class="form-error hidden"></p>
+      <div class="modal-actions" style="margin-top:1rem">
+        <button class="btn btn-ghost" id="builder-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="builder-save-btn">Save Template</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation -->
+  <div id="delete-overlay" class="modal-overlay hidden">
+    <div class="modal modal-sm">
+      <h3>Delete template?</h3>
+      <p>This won't affect any existing workouts created from it.</p>
+      <div class="modal-actions">
+        <button id="cancel-delete-btn" class="btn btn-ghost">Cancel</button>
+        <button id="confirm-delete-btn" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start workout modal -->
+  <div id="start-overlay" class="modal-overlay hidden">
+    <div class="modal modal-sm">
+      <h3 id="start-modal-title">Start Workout</h3>
+      <div class="form-group" style="margin-top:.75rem">
+        <label for="start-date">Date</label>
+        <input type="date" id="start-date" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancel-start-btn">Cancel</button>
+        <button class="btn btn-primary" id="confirm-start-btn">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    if (!localStorage.getItem("token")) window.location.href = "/login";
+    document.getElementById("nav-username").textContent = localStorage.getItem("username") || "";
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      localStorage.clear(); window.location.href = "/login";
+    });
+
+    let library = [];
+    let templates = [];
+    let builderExercises = []; // [{uid, exercise_id, name, notes, sets:[{set_type,reps,weight,percent}]}]
+    let editingTemplateId = null;
+    let pendingDeleteId = null;
+    let pendingStartId = null;
+
+    async function boot() {
+      const [lib, tpls] = await Promise.all([api("/api/library/"), api("/api/templates/")]);
+      library = lib;
+      templates = tpls;
+      renderTemplates();
+    }
+
+    // ── Template list ─────────────────────────────────────────────
+    function renderTemplates() {
+      const el = document.getElementById("templates-container");
+      if (!templates.length) {
+        el.innerHTML = '<p class="text-muted" style="padding:1.5rem 0">No templates yet. Create one to plan your workouts.</p>';
+        return;
+      }
+      el.innerHTML = `<div class="template-grid">${templates.map(renderTemplateCard).join("")}</div>`;
+      document.querySelectorAll(".start-tpl-btn").forEach(btn =>
+        btn.addEventListener("click", () => openStartModal(parseInt(btn.dataset.id), btn.dataset.name))
+      );
+      document.querySelectorAll(".edit-tpl-btn").forEach(btn =>
+        btn.addEventListener("click", () => openBuilder(parseInt(btn.dataset.id)))
+      );
+      document.querySelectorAll(".delete-tpl-btn").forEach(btn =>
+        btn.addEventListener("click", () => openDeleteModal(parseInt(btn.dataset.id)))
+      );
+    }
+
+    function renderTemplateCard(t) {
+      const exRows = (t.exercises || []).map(ex => {
+        const setCount = (ex.sets || []).length;
+        const firstSet = ex.sets && ex.sets[0];
+        let setLabel = setCount ? `${setCount} set${setCount !== 1 ? "s" : ""}` : "";
+        if (firstSet) {
+          if (firstSet.percent) setLabel += ` @ ${firstSet.percent}%`;
+          else if (firstSet.weight) setLabel += ` @ ${displayWeight(firstSet.weight)}`;
+          if (firstSet.reps) setLabel = `${firstSet.reps} reps × ` + setLabel;
+        }
+        return `<li class="template-ex-item">${escapeHtml(ex.exercise_name)}<span class="template-ex-sets">${escapeHtml(setLabel)}</span></li>`;
+      }).join("");
+
+      return `
+        <div class="template-card">
+          <div class="template-card-header">
+            <span class="template-card-name">${escapeHtml(t.name)}</span>
+          </div>
+          ${t.description ? `<p class="template-card-desc">${escapeHtml(t.description)}</p>` : ""}
+          <ul class="template-ex-list">${exRows || '<li class="template-ex-item" style="color:var(--text-muted)">No exercises</li>'}</ul>
+          <div class="template-actions">
+            <button class="btn btn-primary btn-sm start-tpl-btn" data-id="${t.id}" data-name="${escapeHtml(t.name)}">▶ Start Workout</button>
+            <button class="btn btn-ghost btn-sm edit-tpl-btn" data-id="${t.id}">Edit</button>
+            <button class="btn btn-ghost btn-sm delete-tpl-btn" data-id="${t.id}" style="color:var(--danger)">Delete</button>
+          </div>
+        </div>`;
+    }
+
+    // ── Builder ───────────────────────────────────────────────────
+    document.getElementById("new-template-btn").addEventListener("click", () => openBuilder(null));
+    document.getElementById("close-builder-btn").addEventListener("click", closeBuilder);
+    document.getElementById("builder-cancel-btn").addEventListener("click", closeBuilder);
+    document.getElementById("builder-overlay").addEventListener("click", e => {
+      if (e.target === document.getElementById("builder-overlay")) closeBuilder();
+    });
+
+    function openBuilder(templateId) {
+      editingTemplateId = templateId;
+      document.getElementById("builder-modal-title").textContent =
+        templateId ? "Edit Template" : "New Template";
+      document.getElementById("builder-error").classList.add("hidden");
+
+      if (templateId) {
+        const t = templates.find(x => x.id === templateId);
+        document.getElementById("tpl-name").value = t.name;
+        document.getElementById("tpl-desc").value = t.description || "";
+        builderExercises = (t.exercises || []).map(ex => ({
+          uid: Date.now() + Math.random(),
+          exercise_id: ex.exercise_id,
+          name: ex.exercise_name,
+          notes: ex.notes || "",
+          sets: (ex.sets || []).map(s => ({ ...s })),
+        }));
+      } else {
+        document.getElementById("tpl-name").value = "";
+        document.getElementById("tpl-desc").value = "";
+        builderExercises = [];
+      }
+      renderBuilder();
+      document.getElementById("builder-overlay").classList.remove("hidden");
+    }
+
+    function closeBuilder() {
+      document.getElementById("builder-overlay").classList.add("hidden");
+    }
+
+    document.getElementById("builder-add-ex-btn").addEventListener("click", () => {
+      builderExercises.push({
+        uid: Date.now() + Math.random(),
+        exercise_id: null, name: "", notes: "",
+        sets: [{ set_type: "working", reps: 5, weight: null, percent: null }],
+      });
+      renderBuilder();
+    });
+
+    function renderBuilder() {
+      const el = document.getElementById("builder-exercises");
+      if (!builderExercises.length) {
+        el.innerHTML = '<p class="text-muted" style="padding:.5rem 0">No exercises. Add one above.</p>';
+        return;
+      }
+      el.innerHTML = builderExercises.map(ex => renderBuilderExCard(ex)).join("");
+      builderExercises.forEach(ex => attachBuilderListeners(ex.uid));
+    }
+
+    function renderBuilderExCard(ex) {
+      const setsHtml = ex.sets.map((s, i) => `
+        <div class="builder-set-row" data-uid="${ex.uid}" data-idx="${i}">
+          <span style="color:var(--text-muted);text-align:center">${i+1}</span>
+          <select class="bset-type">
+            ${["warmup","working","amrap","emom","failure"].map(t =>
+              `<option value="${t}"${s.set_type===t?" selected":""}>${t}</option>`
+            ).join("")}
+          </select>
+          <input type="number" class="bset-reps" value="${s.reps||""}" placeholder="reps" min="1" />
+          <input type="number" class="bset-weight" value="${s.weight != null ? toDisplayWeight(s.weight) : ""}" placeholder="${unitLabel()}" min="0" step="${weightInputStep()}" />
+          <input type="number" class="bset-pct" value="${s.percent||""}" placeholder="%" min="1" max="200" />
+          <button type="button" class="btn-icon remove-bset-btn" title="Remove">&times;</button>
+        </div>`).join("");
+
+      return `
+        <div class="builder-ex-card" id="bex-${ex.uid}">
+          <div class="builder-ex-header">
+            <div style="flex:1;min-width:0">
+              <div class="autocomplete-wrapper">
+                <input type="text" class="bex-name" data-uid="${ex.uid}"
+                  value="${escapeHtml(ex.name)}" placeholder="Search exercise…" autocomplete="off" />
+                <ul class="autocomplete-list hidden" id="bac-${ex.uid}"></ul>
+              </div>
+            </div>
+            <button type="button" class="btn-icon remove-bex-btn" data-uid="${ex.uid}">&times;</button>
+          </div>
+          <div class="builder-col-headers">
+            <span>#</span><span>Type</span><span>Reps</span><span>Weight</span><span>%TM</span><span></span>
+          </div>
+          <div id="bsets-${ex.uid}">${setsHtml}</div>
+          <div class="builder-ex-footer">
+            <button type="button" class="btn btn-ghost btn-sm add-bset-btn" data-uid="${ex.uid}">+ Add Set</button>
+          </div>
+        </div>`;
+    }
+
+    function attachBuilderListeners(uid) {
+      const ex = builderExercises.find(e => e.uid === uid);
+      if (!ex) return;
+      const card = document.getElementById(`bex-${uid}`);
+
+      // Remove exercise
+      card.querySelector(".remove-bex-btn").addEventListener("click", () => {
+        builderExercises = builderExercises.filter(e => e.uid !== uid);
+        renderBuilder();
+      });
+
+      // Name autocomplete
+      const nameInput = card.querySelector(".bex-name");
+      const acList = document.getElementById(`bac-${uid}`);
+      nameInput.addEventListener("input", () => {
+        ex.name = nameInput.value;
+        ex.exercise_id = null;
+        const q = nameInput.value.trim().toLowerCase();
+        if (!q) { acList.classList.add("hidden"); acList.innerHTML = ""; return; }
+        const matches = library.filter(e => e.name.toLowerCase().includes(q)).slice(0, 8);
+        if (!matches.length) { acList.classList.add("hidden"); acList.innerHTML = ""; return; }
+        acList.innerHTML = matches.map(m =>
+          `<li class="autocomplete-item" data-id="${m.id}" data-name="${escapeHtml(m.name)}">${escapeHtml(m.name)}</li>`
+        ).join("");
+        acList.classList.remove("hidden");
+        acList.querySelectorAll(".autocomplete-item").forEach(li => {
+          li.addEventListener("mousedown", ev => {
+            ev.preventDefault();
+            ex.exercise_id = parseInt(li.dataset.id);
+            ex.name = li.dataset.name;
+            nameInput.value = li.dataset.name;
+            acList.classList.add("hidden");
+          });
+        });
+      });
+      nameInput.addEventListener("blur", () => setTimeout(() => acList.classList.add("hidden"), 150));
+
+      // Add set
+      card.querySelector(".add-bset-btn").addEventListener("click", () => {
+        const last = ex.sets[ex.sets.length - 1];
+        ex.sets.push({ set_type: last ? last.set_type : "working", reps: last ? last.reps : 5, weight: null, percent: null });
+        reRenderBSets(uid);
+      });
+
+      attachBSetListeners(uid);
+    }
+
+    function attachBSetListeners(uid) {
+      const ex = builderExercises.find(e => e.uid === uid);
+      const container = document.getElementById(`bsets-${uid}`);
+      if (!container) return;
+
+      container.querySelectorAll(".bset-type").forEach((sel, i) => {
+        sel.addEventListener("change", () => { ex.sets[i].set_type = sel.value; });
+      });
+      container.querySelectorAll(".bset-reps").forEach((inp, i) => {
+        inp.addEventListener("input", () => { ex.sets[i].reps = parseInt(inp.value) || null; });
+      });
+      container.querySelectorAll(".bset-weight").forEach((inp, i) => {
+        inp.addEventListener("input", () => { ex.sets[i].weight = fromInputWeight(inp.value); });
+      });
+      container.querySelectorAll(".bset-pct").forEach((inp, i) => {
+        inp.addEventListener("input", () => { ex.sets[i].percent = parseFloat(inp.value) || null; });
+      });
+      container.querySelectorAll(".remove-bset-btn").forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+          ex.sets.splice(i, 1);
+          reRenderBSets(uid);
+        });
+      });
+    }
+
+    function reRenderBSets(uid) {
+      const ex = builderExercises.find(e => e.uid === uid);
+      const container = document.getElementById(`bsets-${uid}`);
+      container.innerHTML = ex.sets.map((s, i) => `
+        <div class="builder-set-row" data-uid="${uid}" data-idx="${i}">
+          <span style="color:var(--text-muted);text-align:center">${i+1}</span>
+          <select class="bset-type">
+            ${["warmup","working","amrap","emom","failure"].map(t =>
+              `<option value="${t}"${s.set_type===t?" selected":""}>${t}</option>`
+            ).join("")}
+          </select>
+          <input type="number" class="bset-reps" value="${s.reps||""}" placeholder="reps" min="1" />
+          <input type="number" class="bset-weight" value="${s.weight != null ? toDisplayWeight(s.weight) : ""}" placeholder="${unitLabel()}" min="0" step="${weightInputStep()}" />
+          <input type="number" class="bset-pct" value="${s.percent||""}" placeholder="%" min="1" max="200" />
+          <button type="button" class="btn-icon remove-bset-btn">&times;</button>
+        </div>`).join("");
+      attachBSetListeners(uid);
+    }
+
+    // Save template
+    document.getElementById("builder-save-btn").addEventListener("click", async () => {
+      const errEl = document.getElementById("builder-error");
+      const name = document.getElementById("tpl-name").value.trim();
+      if (!name) { errEl.textContent = "Template name is required."; errEl.classList.remove("hidden"); return; }
+      const missing = builderExercises.find(e => !e.exercise_id);
+      if (missing) { errEl.textContent = `Select an exercise from the library for all exercises.`; errEl.classList.remove("hidden"); return; }
+      errEl.classList.add("hidden");
+
+      const payload = {
+        name,
+        description: document.getElementById("tpl-desc").value.trim() || null,
+        exercises: builderExercises.map(ex => ({
+          exercise_id: ex.exercise_id,
+          notes: ex.notes || null,
+          sets: ex.sets.filter(s => s.reps || s.weight || s.percent),
+        })),
+      };
+
+      try {
+        if (editingTemplateId) {
+          const updated = await api(`/api/templates/${editingTemplateId}`, "PUT", payload);
+          templates = templates.map(t => t.id === editingTemplateId ? updated : t);
+        } else {
+          const created = await api("/api/templates/", "POST", payload);
+          templates.push(created);
+        }
+        closeBuilder();
+        renderTemplates();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove("hidden");
+      }
+    });
+
+    // ── Delete template ───────────────────────────────────────────
+    function openDeleteModal(id) {
+      pendingDeleteId = id;
+      document.getElementById("delete-overlay").classList.remove("hidden");
+    }
+    document.getElementById("cancel-delete-btn").addEventListener("click", () => {
+      document.getElementById("delete-overlay").classList.add("hidden");
+    });
+    document.getElementById("confirm-delete-btn").addEventListener("click", async () => {
+      await api(`/api/templates/${pendingDeleteId}`, "DELETE");
+      templates = templates.filter(t => t.id !== pendingDeleteId);
+      document.getElementById("delete-overlay").classList.add("hidden");
+      renderTemplates();
+    });
+
+    // ── Start workout from template ───────────────────────────────
+    function openStartModal(id, name) {
+      pendingStartId = id;
+      document.getElementById("start-modal-title").textContent = `Start: ${name}`;
+      document.getElementById("start-date").value = new Date().toISOString().slice(0, 10);
+      document.getElementById("start-overlay").classList.remove("hidden");
+    }
+    document.getElementById("cancel-start-btn").addEventListener("click", () => {
+      document.getElementById("start-overlay").classList.add("hidden");
+    });
+    document.getElementById("confirm-start-btn").addEventListener("click", async () => {
+      const date = document.getElementById("start-date").value;
+      const session = await api(`/api/templates/${pendingStartId}/start`, "POST",
+        { date: date + "T12:00:00" });
+      document.getElementById("start-overlay").classList.add("hidden");
+      window.location.href = `/session/${session.id}`;
+    });
+
+    initUnitToggle(() => { renderTemplates(); renderBuilder(); });
+    boot();
+  </script>
+</body>
+</html>

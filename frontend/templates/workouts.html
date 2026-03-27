@@ -11,20 +11,46 @@
   <!-- Nav -->
   <nav class="navbar">
     <span class="nav-logo">WorkoutLog</span>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-link">Dashboard</a>
+      <a href="/workouts" class="nav-link active">Workouts</a>
+      <a href="/templates" class="nav-link">Templates</a>
+      <a href="/maxes" class="nav-link">Maxes</a>
+    </div>
     <div class="nav-right">
       <span id="nav-username"></span>
+      <button class="btn btn-ghost unit-toggle" title="Switch weight units">lbs</button>
       <button id="logout-btn" class="btn btn-ghost">Logout</button>
     </div>
   </nav>
 
   <main class="container">
-    <div class="page-header">
-      <h2>My Workouts</h2>
-      <button id="open-modal-btn" class="btn btn-primary">+ Log Workout</button>
-    </div>
+    <div class="calendar-layout">
 
-    <div id="workout-list" class="workout-grid">
-      <p class="empty-state">Loading...</p>
+      <!-- Calendar panel -->
+      <div class="calendar-panel">
+        <div class="calendar-nav">
+          <button id="prev-month-btn" class="btn-icon" title="Previous month">&#8249;</button>
+          <h3 id="calendar-month-label"></h3>
+          <button id="next-month-btn" class="btn-icon" title="Next month">&#8250;</button>
+        </div>
+        <div class="cal-weekdays">
+          <div class="cal-weekday">Su</div>
+          <div class="cal-weekday">Mo</div>
+          <div class="cal-weekday">Tu</div>
+          <div class="cal-weekday">We</div>
+          <div class="cal-weekday">Th</div>
+          <div class="cal-weekday">Fr</div>
+          <div class="cal-weekday">Sa</div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <!-- Day detail panel -->
+      <div class="day-panel" id="day-panel">
+        <p class="day-panel-empty">Select a day to view or log workouts.</p>
+      </div>
+
     </div>
   </main>
 
@@ -37,13 +63,14 @@
       </div>
       <form id="workout-form">
         <input type="hidden" id="workout-id" />
+        <input type="hidden" id="workout-date" />
         <div class="form-group">
           <label for="workout-title">Title <span class="required">*</span></label>
-          <input id="workout-title" type="text" placeholder="e.g. Morning Run" required />
+          <input id="workout-title" type="text" placeholder="e.g. Leg Day" required />
         </div>
         <div class="form-group">
           <label for="workout-duration">Duration (minutes)</label>
-          <input id="workout-duration" type="number" min="1" placeholder="30" />
+          <input id="workout-duration" type="number" min="1" placeholder="60" />
         </div>
         <div class="form-group">
           <label for="workout-notes">Notes</label>
@@ -60,7 +87,7 @@
 
   <!-- Exercise modal -->
   <div id="exercise-modal-overlay" class="modal-overlay hidden">
-    <div class="modal">
+    <div class="modal modal-lg">
       <div class="modal-header">
         <h3 id="exercise-modal-title">Add Exercise</h3>
         <button id="close-exercise-modal-btn" class="btn-icon">&times;</button>
@@ -70,22 +97,27 @@
         <input type="hidden" id="exercise-workout-id" />
         <div class="form-group">
           <label for="exercise-name">Exercise <span class="required">*</span></label>
-          <input id="exercise-name" type="text" placeholder="e.g. Bench Press" required />
-        </div>
-        <div class="exercise-row">
-          <div class="form-group">
-            <label for="exercise-sets">Sets</label>
-            <input id="exercise-sets" type="number" min="1" placeholder="3" />
+          <div class="autocomplete-wrapper">
+            <input id="exercise-name" type="text" placeholder="Search or type exercise name..." autocomplete="off" required />
+            <ul class="autocomplete-list hidden" id="exercise-suggestions"></ul>
           </div>
-          <div class="form-group">
-            <label for="exercise-reps">Reps</label>
-            <input id="exercise-reps" type="number" min="1" placeholder="10" />
-          </div>
-          <div class="form-group">
-            <label for="exercise-weight">Weight (kg)</label>
-            <input id="exercise-weight" type="number" min="0" step="0.5" placeholder="60" />
+          <div class="exercise-max-row hidden" id="exercise-max-row">
+            <span class="max-badge" id="max-badge">Max: —</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="save-max-btn">Save as Max</button>
           </div>
         </div>
+
+        <div class="sets-section">
+          <div class="sets-header">
+            <span class="sets-label">Sets</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="add-set-btn">+ Add Set</button>
+          </div>
+          <div class="sets-col-headers">
+            <span>#</span><span>Reps</span><span>Weight (lbs)</span><span>% of Max</span><span></span>
+          </div>
+          <div id="sets-container"></div>
+        </div>
+
         <div class="form-group">
           <label for="exercise-notes">Notes</label>
           <input id="exercise-notes" type="text" placeholder="e.g. Felt strong" />
@@ -96,6 +128,25 @@
           <button type="submit" class="btn btn-primary">Save</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Save as Template modal -->
+  <div id="template-save-overlay" class="modal-overlay hidden">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>Save as Template</h3>
+        <button id="close-template-save-btn" class="btn-icon">&times;</button>
+      </div>
+      <div class="form-group" style="margin-top:.5rem">
+        <label for="template-save-name">Template name</label>
+        <input id="template-save-name" type="text" placeholder="e.g. 5×5 Workout A" />
+      </div>
+      <p id="template-save-error" class="form-error hidden"></p>
+      <div class="modal-actions">
+        <button id="cancel-template-save-btn" class="btn btn-ghost">Cancel</button>
+        <button id="confirm-template-save-btn" class="btn btn-primary">Save Template</button>
+      </div>
     </div>
   </div>
 
@@ -115,92 +166,222 @@
   <script>
     if (!localStorage.getItem("token")) window.location.href = "/login";
     document.getElementById("nav-username").textContent = localStorage.getItem("username") || "";
-
     document.getElementById("logout-btn").addEventListener("click", () => {
       localStorage.clear();
       window.location.href = "/login";
     });
 
-    // ── Load workouts ─────────────────────────────────────
-    async function loadWorkouts() {
-      const list = document.getElementById("workout-list");
-      try {
-        const workouts = await api("/api/workouts/", "GET");
-        if (workouts.length === 0) {
-          list.innerHTML = '<p class="empty-state">No workouts yet. Log your first one!</p>';
-          return;
+    // Exercise library loaded from API via attachLibraryAutocomplete (see main.js)
+
+    // ── State ──────────────────────────────────────────────
+    const today = new Date();
+    let calYear = today.getFullYear();
+    let calMonth = today.getMonth();
+    let selectedDateStr = null;
+    let allWorkouts = [];
+    let exerciseCache = {};
+    let trainingMaxMap = {}; // exercise_library_id -> weight
+    let modalSets = [];
+    let currentMax = null;
+
+    const MONTHS = ["January","February","March","April","May","June",
+                    "July","August","September","October","November","December"];
+
+    function makeDateStr(y, m, d) {
+      return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    }
+
+    function workoutsForDate(ds) {
+      return allWorkouts.filter(w => w.date.slice(0,10) === ds);
+    }
+
+    // ── Load training maxes ────────────────────────────────
+    async function loadMaxes() {
+      const maxes = await api("/api/training-maxes/");
+      trainingMaxMap = {};
+      maxes.forEach(m => { trainingMaxMap[m.exercise_id] = m.training_max_weight; });
+    }
+
+    // ── Calendar ───────────────────────────────────────────
+    function renderCalendar() {
+      document.getElementById("calendar-month-label").textContent = `${MONTHS[calMonth]} ${calYear}`;
+      const grid = document.getElementById("cal-grid");
+      grid.innerHTML = "";
+      const firstDow = new Date(calYear, calMonth, 1).getDay();
+      const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+      const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
+      const todayStr = makeDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+
+      for (let i = 0; i < 42; i++) {
+        let ds, isOther = false;
+        if (i < firstDow) {
+          const d = prevMonthDays - firstDow + i + 1;
+          const m = calMonth === 0 ? 11 : calMonth-1;
+          const y = calMonth === 0 ? calYear-1 : calYear;
+          ds = makeDateStr(y, m, d); isOther = true;
+        } else if (i >= firstDow + daysInMonth) {
+          const d = i - firstDow - daysInMonth + 1;
+          const m = calMonth === 11 ? 0 : calMonth+1;
+          const y = calMonth === 11 ? calYear+1 : calYear;
+          ds = makeDateStr(y, m, d); isOther = true;
+        } else {
+          ds = makeDateStr(calYear, calMonth, i - firstDow + 1);
         }
-        list.innerHTML = workouts.map(w => `
-          <div class="workout-card" data-id="${w.id}">
-            <div class="workout-card-header">
-              <h3>${escapeHtml(w.title)}</h3>
-              <div class="card-actions">
-                <button class="btn-icon edit-btn" data-id="${w.id}" title="Edit workout">&#9998;</button>
-                <button class="btn-icon delete-btn" data-type="workout" data-id="${w.id}" title="Delete workout">&times;</button>
-              </div>
-            </div>
-            ${w.duration_minutes ? `<p class="workout-meta">${w.duration_minutes} min</p>` : ""}
-            ${w.notes ? `<p class="workout-notes">${escapeHtml(w.notes)}</p>` : ""}
-
-            <div class="exercise-section">
-              <div class="exercise-section-header">
-                <span class="exercise-section-label">Exercises</span>
-                <button class="btn-icon add-exercise-btn" data-workout-id="${w.id}" title="Add exercise">+ Add</button>
-              </div>
-              <ul class="exercise-list" id="exercises-${w.id}">
-                <li class="exercise-loading">Loading...</li>
-              </ul>
-            </div>
-
-            <p class="workout-date">${formatDate(w.date)}</p>
-          </div>
-        `).join("");
-
-        document.querySelectorAll(".edit-btn").forEach(btn =>
-          btn.addEventListener("click", () => openEditWorkoutModal(Number(btn.dataset.id), workouts))
-        );
-        document.querySelectorAll(".delete-btn[data-type='workout']").forEach(btn =>
-          btn.addEventListener("click", () => openDeleteModal("workout", Number(btn.dataset.id)))
-        );
-        document.querySelectorAll(".add-exercise-btn").forEach(btn =>
-          btn.addEventListener("click", () => openCreateExerciseModal(Number(btn.dataset.workoutId)))
-        );
-
-        // Load exercises for each workout
-        workouts.forEach(w => loadExercises(w.id));
-      } catch (err) {
-        list.innerHTML = `<p class="empty-state error">${err.message}</p>`;
+        const cell = document.createElement("div");
+        cell.className = "cal-day";
+        if (isOther) cell.classList.add("other-month");
+        if (ds === todayStr) cell.classList.add("today");
+        if (ds === selectedDateStr) cell.classList.add("selected");
+        const numEl = document.createElement("span");
+        numEl.className = "cal-day-num";
+        numEl.textContent = parseInt(ds.slice(8));
+        cell.appendChild(numEl);
+        const dayWos = workoutsForDate(ds);
+        if (dayWos.length > 0) {
+          const dots = document.createElement("div");
+          dots.className = "cal-dots";
+          for (let j = 0; j < Math.min(dayWos.length, 3); j++) {
+            const dot = document.createElement("div");
+            dot.className = "cal-dot";
+            dots.appendChild(dot);
+          }
+          cell.appendChild(dots);
+        }
+        cell.dataset.date = ds;
+        cell.addEventListener("click", () => selectDay(ds));
+        grid.appendChild(cell);
       }
     }
 
-    // ── Exercises ─────────────────────────────────────────
+    function selectDay(ds) { selectedDateStr = ds; renderCalendar(); renderDayPanel(); }
+
+    document.getElementById("prev-month-btn").addEventListener("click", () => {
+      if (calMonth === 0) { calMonth = 11; calYear--; } else calMonth--;
+      renderCalendar();
+    });
+    document.getElementById("next-month-btn").addEventListener("click", () => {
+      if (calMonth === 11) { calMonth = 0; calYear++; } else calMonth++;
+      renderCalendar();
+    });
+
+    // ── Day panel ──────────────────────────────────────────
+    function renderDayPanel() {
+      const panel = document.getElementById("day-panel");
+      if (!selectedDateStr) {
+        panel.innerHTML = '<p class="day-panel-empty">Select a day to view or log workouts.</p>';
+        return;
+      }
+      const dayWos = workoutsForDate(selectedDateStr);
+      const displayDate = new Date(selectedDateStr + "T12:00:00").toLocaleDateString(undefined, {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+      });
+      panel.innerHTML = `
+        <div class="day-panel-header">
+          <span class="day-panel-date">${displayDate}</span>
+          <button class="btn btn-ghost btn-sm" id="new-blank-btn">+ Blank</button>
+          <button class="btn btn-primary" id="add-workout-btn">+ From Template</button>
+        </div>
+        ${dayWos.length === 0
+          ? '<p class="day-panel-empty" style="padding:2rem 0">No workouts logged for this day.</p>'
+          : `<div class="day-workouts">${dayWos.map(renderWorkoutCard).join("")}</div>`
+        }
+      `;
+      document.getElementById("add-workout-btn").addEventListener("click", () => { window.location.href = "/templates"; });
+      document.getElementById("new-blank-btn").addEventListener("click", () => { window.location.href = `/log?date=${selectedDateStr}`; });
+      panel.querySelectorAll(".edit-workout-btn").forEach(btn =>
+        btn.addEventListener("click", () => openEditWorkoutModal(Number(btn.dataset.id)))
+      );
+      panel.querySelectorAll(".delete-workout-btn").forEach(btn =>
+        btn.addEventListener("click", () => openDeleteModal("workout", Number(btn.dataset.id)))
+      );
+      panel.querySelectorAll(".add-exercise-btn").forEach(btn =>
+        btn.addEventListener("click", () => openCreateExerciseModal(Number(btn.dataset.workoutId)))
+      );
+      panel.querySelectorAll(".copy-workout-btn").forEach(btn =>
+        btn.addEventListener("click", async () => {
+          const newSession = await api(`/api/workouts/${btn.dataset.id}/copy`, "POST",
+            { date: selectedDateStr + "T12:00:00" });
+          window.location.href = `/session/${newSession.id}`;
+        })
+      );
+      panel.querySelectorAll(".save-template-btn").forEach(btn =>
+        btn.addEventListener("click", () => openSaveTemplateModal(Number(btn.dataset.id), btn.dataset.title))
+      );
+      dayWos.forEach(w => loadExercises(w.id));
+    }
+
+    function statusBadge(status) {
+      if (status === "planned") return `<span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">Planned</span>`;
+      if (status === "in_progress") return `<span style="font-size:.7rem;color:var(--accent);margin-left:.4rem">In Progress</span>`;
+      return "";
+    }
+
+    function renderWorkoutCard(w) {
+      return `
+        <div class="day-workout-card" data-id="${w.id}">
+          <div class="day-workout-header">
+            <span class="day-workout-title">${escapeHtml(w.title)}${statusBadge(w.status)}</span>
+            <div class="card-actions">
+              <a href="/session/${w.id}" class="btn-icon" title="Open session" style="text-decoration:none">&#9654;</a>
+              <button class="btn-icon copy-workout-btn" data-id="${w.id}" title="Copy to new session">&#10697;</button>
+              <button class="btn-icon save-template-btn" data-id="${w.id}" data-title="${escapeHtml(w.title)}" title="Save as template">&#128278;</button>
+              <button class="btn-icon edit-workout-btn" data-id="${w.id}" title="Edit">&#9998;</button>
+              <button class="btn-icon delete-workout-btn" data-id="${w.id}" title="Delete">&times;</button>
+            </div>
+          </div>
+          ${w.duration_minutes ? `<p class="day-workout-meta">${w.duration_minutes} min</p>` : ""}
+          ${w.notes ? `<p class="workout-notes">${escapeHtml(w.notes)}</p>` : ""}
+          <div class="exercise-section">
+            <div class="exercise-section-header">
+              <span class="exercise-section-label">Exercises</span>
+              <button class="btn-icon add-exercise-btn" data-workout-id="${w.id}">+ Add</button>
+            </div>
+            <ul class="exercise-list" id="exercises-${w.id}">
+              <li class="exercise-loading">Loading...</li>
+            </ul>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Exercise loading ───────────────────────────────────
     async function loadExercises(workoutId) {
       const ul = document.getElementById(`exercises-${workoutId}`);
       if (!ul) return;
       try {
         const exercises = await api(`/api/workouts/${workoutId}/exercises`);
-        if (exercises.length === 0) {
+        exerciseCache[workoutId] = exercises;
+        if (!exercises.length) {
           ul.innerHTML = '<li class="exercise-empty">No exercises logged yet.</li>';
           return;
         }
-        ul.innerHTML = exercises.map(e => `
-          <li class="exercise-item" data-id="${e.id}">
-            <div class="exercise-info">
-              <span class="exercise-name">${escapeHtml(e.name)}</span>
-              <span class="exercise-stats">${formatExerciseStats(e)}</span>
-              ${e.notes ? `<span class="exercise-notes">${escapeHtml(e.notes)}</span>` : ""}
-            </div>
-            <div class="exercise-actions">
-              <button class="btn-icon edit-exercise-btn" data-id="${e.id}" data-workout-id="${e.workout_id}" title="Edit">&#9998;</button>
-              <button class="btn-icon delete-btn" data-type="exercise" data-id="${e.id}" data-workout-id="${e.workout_id}" title="Delete">&times;</button>
-            </div>
-          </li>
-        `).join("");
-
+        ul.innerHTML = exercises.map(e => {
+          const chips = (e.sets || []).map(s => {
+            const label = s.reps && s.weight_lb ? `${s.reps}×${toDisplayWeight(s.weight_lb)}${unitLabel()}`
+                        : s.reps ? `${s.reps} reps`
+                        : s.weight_lb ? `${s.weight_lb}lbs` : null;
+            return label ? `<span class="set-chip">${label}</span>` : "";
+          }).join("");
+          const summary = formatExerciseStats(e);
+          return `
+            <li class="exercise-item" data-id="${e.id}">
+              <div class="exercise-info">
+                <span class="exercise-name">${escapeHtml(e.name)}</span>
+                ${summary ? `<span class="exercise-stats">${summary}</span>` : ""}
+                ${chips ? `<div class="set-chips">${chips}</div>` : ""}
+                ${e.notes ? `<span class="exercise-notes">${escapeHtml(e.notes)}</span>` : ""}
+              </div>
+              <div class="exercise-actions">
+                <button class="btn-icon edit-exercise-btn" data-id="${e.id}" data-workout-id="${e.workout_id}" title="Edit">&#9998;</button>
+                <button class="btn-icon delete-exercise-btn" data-id="${e.id}" data-workout-id="${e.workout_id}" title="Delete">&times;</button>
+              </div>
+            </li>
+          `;
+        }).join("");
         ul.querySelectorAll(".edit-exercise-btn").forEach(btn =>
-          btn.addEventListener("click", () => openEditExerciseModal(Number(btn.dataset.id), exercises))
+          btn.addEventListener("click", () => openEditExerciseModal(Number(btn.dataset.id), exerciseCache[workoutId]))
         );
-        ul.querySelectorAll(".delete-btn[data-type='exercise']").forEach(btn =>
+        ul.querySelectorAll(".delete-exercise-btn").forEach(btn =>
           btn.addEventListener("click", () => openDeleteModal("exercise", Number(btn.dataset.id), Number(btn.dataset.workoutId)))
         );
       } catch (err) {
@@ -209,29 +390,36 @@
     }
 
     function formatExerciseStats(e) {
-      const parts = [];
-      if (e.sets) parts.push(`${e.sets} sets`);
-      if (e.reps) parts.push(`${e.reps} reps`);
-      if (e.weight_kg) parts.push(`${e.weight_kg} kg`);
-      return parts.join(" · ");
+      if (!e.sets || !e.sets.length) return "";
+      const n = e.sets.length;
+      const weights = e.sets.map(s => s.weight_lb).filter(Boolean);
+      const repsArr = [...new Set(e.sets.map(s => s.reps).filter(Boolean))];
+      const repsLabel = repsArr.length === 1 ? `${repsArr[0]} reps` : "";
+      if (!weights.length) return repsLabel ? `${n} sets × ${repsLabel}` : `${n} sets`;
+      const minW = Math.min(...weights), maxW = Math.max(...weights);
+      const wLabel = minW === maxW ? displayWeight(minW) : `${toDisplayWeight(minW)}–${displayWeight(maxW)}`;
+      return repsLabel ? `${n} sets × ${repsLabel} @ ${wLabel}` : `${n} sets @ ${wLabel}`;
     }
 
-    // ── Workout modal ─────────────────────────────────────
+    // ── Workout modal ──────────────────────────────────────
     const overlay = document.getElementById("modal-overlay");
     const workoutForm = document.getElementById("workout-form");
 
-    function openCreateWorkoutModal() {
+    function openCreateWorkoutModal(date) {
       document.getElementById("modal-title").textContent = "Log Workout";
       workoutForm.reset();
       document.getElementById("workout-id").value = "";
+      document.getElementById("workout-date").value = date || "";
       document.getElementById("workout-error").classList.add("hidden");
       overlay.classList.remove("hidden");
     }
 
-    function openEditWorkoutModal(id, workouts) {
-      const w = workouts.find(x => x.id === id);
+    function openEditWorkoutModal(id) {
+      const w = allWorkouts.find(x => x.id === id);
+      if (!w) return;
       document.getElementById("modal-title").textContent = "Edit Workout";
       document.getElementById("workout-id").value = w.id;
+      document.getElementById("workout-date").value = "";
       document.getElementById("workout-title").value = w.title;
       document.getElementById("workout-duration").value = w.duration_minutes || "";
       document.getElementById("workout-notes").value = w.notes || "";
@@ -240,8 +428,6 @@
     }
 
     function closeWorkoutModal() { overlay.classList.add("hidden"); }
-
-    document.getElementById("open-modal-btn").addEventListener("click", openCreateWorkoutModal);
     document.getElementById("close-modal-btn").addEventListener("click", closeWorkoutModal);
     document.getElementById("cancel-btn").addEventListener("click", closeWorkoutModal);
     overlay.addEventListener("click", e => { if (e.target === overlay) closeWorkoutModal(); });
@@ -250,19 +436,19 @@
       e.preventDefault();
       const errorEl = document.getElementById("workout-error");
       const id = document.getElementById("workout-id").value;
+      const dateVal = document.getElementById("workout-date").value;
       const payload = {
         title: document.getElementById("workout-title").value,
         duration_minutes: Number(document.getElementById("workout-duration").value) || null,
         notes: document.getElementById("workout-notes").value || null,
       };
+      if (dateVal) payload.date = dateVal + "T12:00:00";
       try {
-        if (id) {
-          await api(`/api/workouts/${id}`, "PUT", payload);
-        } else {
-          await api("/api/workouts/", "POST", payload);
-        }
+        if (id) { await api(`/api/workouts/${id}`, "PUT", payload); }
+        else { await api("/api/workouts/", "POST", payload); }
         closeWorkoutModal();
-        loadWorkouts();
+        await loadAllWorkouts();
+        renderDayPanel();
       } catch (err) {
         errorEl.textContent = err.message;
         errorEl.classList.remove("hidden");
@@ -272,6 +458,30 @@
     // ── Exercise modal ─────────────────────────────────────
     const exerciseOverlay = document.getElementById("exercise-modal-overlay");
     const exerciseForm = document.getElementById("exercise-form");
+    const acInput = document.getElementById("exercise-name");
+    const acList = document.getElementById("exercise-suggestions");
+    let selectedLibraryId = null;
+
+    // Attach library autocomplete (async — library loaded once from API)
+    attachLibraryAutocomplete(acInput, acList, item => {
+      selectedLibraryId = item.id;
+      updateMaxDisplay(item.id);
+    });
+
+    function updateMaxDisplay(libraryId) {
+      const maxRow = document.getElementById("exercise-max-row");
+      const maxBadge = document.getElementById("max-badge");
+      // Look up training max by exercise_library_id
+      const rec = libraryId ? trainingMaxMap[libraryId] : null;
+      currentMax = rec || null;
+      if (currentMax) {
+        maxBadge.textContent = `TM: ${currentMax} lbs`;
+        maxRow.classList.remove("hidden");
+      } else {
+        maxRow.classList.add("hidden");
+      }
+      renderSetRows();
+    }
 
     function openCreateExerciseModal(workoutId) {
       document.getElementById("exercise-modal-title").textContent = "Add Exercise";
@@ -279,47 +489,126 @@
       document.getElementById("exercise-id").value = "";
       document.getElementById("exercise-workout-id").value = workoutId;
       document.getElementById("exercise-error").classList.add("hidden");
+      document.getElementById("exercise-max-row").classList.add("hidden");
+      closeAcList();
+      modalSets = [{ reps: 5, weight_lb: null }, { reps: 5, weight_lb: null },
+                   { reps: 5, weight_lb: null }, { reps: 5, weight_lb: null },
+                   { reps: 5, weight_lb: null }];
+      currentMax = null;
+      renderSetRows();
       exerciseOverlay.classList.remove("hidden");
+      setTimeout(() => acInput.focus(), 50);
     }
 
     function openEditExerciseModal(id, exercises) {
       const e = exercises.find(x => x.id === id);
+      if (!e) return;
       document.getElementById("exercise-modal-title").textContent = "Edit Exercise";
       document.getElementById("exercise-id").value = e.id;
       document.getElementById("exercise-workout-id").value = e.workout_id;
-      document.getElementById("exercise-name").value = e.name;
-      document.getElementById("exercise-sets").value = e.sets || "";
-      document.getElementById("exercise-reps").value = e.reps || "";
-      document.getElementById("exercise-weight").value = e.weight_kg || "";
+      acInput.value = e.name;
       document.getElementById("exercise-notes").value = e.notes || "";
       document.getElementById("exercise-error").classList.add("hidden");
+      closeAcList();
+      modalSets = (e.sets || []).map(s => ({ reps: s.reps, weight_lb: s.weight_lb }));
+      if (!modalSets.length) modalSets = [{ reps: null, weight_lb: null }];
+      updateMaxDisplay(e.name);
       exerciseOverlay.classList.remove("hidden");
     }
 
-    function closeExerciseModal() { exerciseOverlay.classList.add("hidden"); }
-
+    function closeExerciseModal() { exerciseOverlay.classList.add("hidden"); closeAcList(); }
     document.getElementById("close-exercise-modal-btn").addEventListener("click", closeExerciseModal);
     document.getElementById("cancel-exercise-btn").addEventListener("click", closeExerciseModal);
     exerciseOverlay.addEventListener("click", e => { if (e.target === exerciseOverlay) closeExerciseModal(); });
+
+    // ── Set rows ───────────────────────────────────────────
+    function renderSetRows() {
+      const container = document.getElementById("sets-container");
+      container.innerHTML = modalSets.map((s, i) => {
+        const pct = (currentMax && s.weight_lb) ? Math.round(s.weight_lb / currentMax * 100) : "";
+        return `
+          <div class="set-row" data-idx="${i}">
+            <span class="set-num">${i + 1}</span>
+            <input type="number" class="set-reps" value="${s.reps || ""}" min="1" placeholder="5" />
+            <input type="number" class="set-lb" value="${s.weight_lb || ""}" min="0" step="2.5" placeholder="lbs" />
+            <input type="number" class="set-pct" value="${pct}" min="1" max="200" placeholder="%" ${!currentMax ? "disabled title='Set a personal max first'" : ""} />
+            <button type="button" class="btn-icon remove-set-btn" data-idx="${i}">&times;</button>
+          </div>
+        `;
+      }).join("");
+
+      container.querySelectorAll(".set-reps").forEach((input, i) => {
+        input.addEventListener("input", () => { modalSets[i].reps = parseInt(input.value) || null; });
+      });
+
+      container.querySelectorAll(".set-lb").forEach((input, i) => {
+        input.addEventListener("input", () => {
+          modalSets[i].weight_lb = parseFloat(input.value) || null;
+          if (currentMax && modalSets[i].weight_lb) {
+            const pct = Math.round(modalSets[i].weight_lb / currentMax * 100);
+            container.querySelectorAll(".set-pct")[i].value = pct;
+          } else {
+            container.querySelectorAll(".set-pct")[i].value = "";
+          }
+        });
+      });
+
+      container.querySelectorAll(".set-pct").forEach((input, i) => {
+        input.addEventListener("input", () => {
+          const pct = parseFloat(input.value);
+          if (currentMax && pct) {
+            const lb = Math.round(currentMax * pct / 100 / 2.5) * 2.5;
+            modalSets[i].weight_lb = lb;
+            container.querySelectorAll(".set-lb")[i].value = lb;
+          }
+        });
+      });
+
+      container.querySelectorAll(".remove-set-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.dataset.idx);
+          modalSets.splice(idx, 1);
+          renderSetRows();
+        });
+      });
+    }
+
+    document.getElementById("add-set-btn").addEventListener("click", () => {
+      const last = modalSets[modalSets.length - 1];
+      modalSets.push({ reps: last ? last.reps : 5, weight_lb: last ? last.weight_lb : null });
+      renderSetRows();
+    });
+
+    document.getElementById("save-max-btn").addEventListener("click", async () => {
+      if (!selectedLibraryId) return;
+      const maxWeight = Math.max(...modalSets.map(s => s.weight_lb || 0));
+      if (!maxWeight) return;
+      await api("/api/training-maxes/", "POST", {
+        exercise_id: selectedLibraryId,
+        training_max_weight: maxWeight,
+      });
+      await loadMaxes();
+      updateMaxDisplay(selectedLibraryId);
+    });
+
+    // Autocomplete wired up via attachLibraryAutocomplete (above)
 
     exerciseForm.addEventListener("submit", async e => {
       e.preventDefault();
       const errorEl = document.getElementById("exercise-error");
       const id = document.getElementById("exercise-id").value;
       const workoutId = document.getElementById("exercise-workout-id").value;
+      const sets = modalSets
+        .filter(s => s.reps || s.weight_lb)
+        .map((s, i) => ({ set_number: i+1, reps: s.reps, weight_lb: s.weight_lb }));
       const payload = {
-        name: document.getElementById("exercise-name").value,
-        sets: Number(document.getElementById("exercise-sets").value) || null,
-        reps: Number(document.getElementById("exercise-reps").value) || null,
-        weight_kg: Number(document.getElementById("exercise-weight").value) || null,
+        name: acInput.value,
         notes: document.getElementById("exercise-notes").value || null,
+        sets,
       };
       try {
-        if (id) {
-          await api(`/api/exercises/${id}`, "PUT", payload);
-        } else {
-          await api(`/api/workouts/${workoutId}/exercises`, "POST", payload);
-        }
+        if (id) { await api(`/api/exercises/${id}`, "PUT", payload); }
+        else { await api(`/api/workouts/${workoutId}/exercises`, "POST", payload); }
         closeExerciseModal();
         loadExercises(Number(workoutId));
       } catch (err) {
@@ -334,28 +623,63 @@
 
     function openDeleteModal(type, id, workoutId = null) {
       pendingDelete = { type, id, workoutId };
-      document.getElementById("delete-title").textContent =
-        type === "workout" ? "Delete workout?" : "Delete exercise?";
+      document.getElementById("delete-title").textContent = type === "workout" ? "Delete workout?" : "Delete exercise?";
       deleteOverlay.classList.remove("hidden");
     }
 
-    document.getElementById("cancel-delete-btn").addEventListener("click", () => {
-      deleteOverlay.classList.add("hidden");
-    });
-
+    document.getElementById("cancel-delete-btn").addEventListener("click", () => { deleteOverlay.classList.add("hidden"); });
     document.getElementById("confirm-delete-btn").addEventListener("click", async () => {
       const { type, id, workoutId } = pendingDelete;
-      if (type === "workout") {
-        await api(`/api/workouts/${id}`, "DELETE");
-        loadWorkouts();
-      } else {
-        await api(`/api/exercises/${id}`, "DELETE");
-        loadExercises(workoutId);
-      }
+      if (type === "workout") { await api(`/api/workouts/${id}`, "DELETE"); await loadAllWorkouts(); renderDayPanel(); }
+      else { await api(`/api/exercises/${id}`, "DELETE"); loadExercises(workoutId); }
       deleteOverlay.classList.add("hidden");
     });
 
-    loadWorkouts();
+    // ── Save as Template ───────────────────────────────────
+    let templateSaveWorkoutId = null;
+    const templateSaveOverlay = document.getElementById("template-save-overlay");
+
+    function openSaveTemplateModal(workoutId, defaultName) {
+      templateSaveWorkoutId = workoutId;
+      document.getElementById("template-save-name").value = defaultName || "";
+      document.getElementById("template-save-error").classList.add("hidden");
+      templateSaveOverlay.classList.remove("hidden");
+      setTimeout(() => document.getElementById("template-save-name").select(), 50);
+    }
+
+    function closeSaveTemplateModal() { templateSaveOverlay.classList.add("hidden"); }
+    document.getElementById("close-template-save-btn").addEventListener("click", closeSaveTemplateModal);
+    document.getElementById("cancel-template-save-btn").addEventListener("click", closeSaveTemplateModal);
+    templateSaveOverlay.addEventListener("click", e => { if (e.target === templateSaveOverlay) closeSaveTemplateModal(); });
+
+    document.getElementById("confirm-template-save-btn").addEventListener("click", async () => {
+      const name = document.getElementById("template-save-name").value.trim();
+      const errorEl = document.getElementById("template-save-error");
+      if (!name) { errorEl.textContent = "Template name is required."; errorEl.classList.remove("hidden"); return; }
+      try {
+        await api(`/api/workouts/${templateSaveWorkoutId}/save-as-template`, "POST", { name });
+        closeSaveTemplateModal();
+        // Brief toast-style feedback
+        const toast = document.createElement("div");
+        toast.textContent = `Template "${name}" saved.`;
+        toast.style.cssText = "position:fixed;bottom:1.5rem;right:1.5rem;background:var(--accent);color:#fff;padding:.6rem 1.1rem;border-radius:8px;font-size:.88rem;z-index:9999;box-shadow:0 2px 10px rgba(0,0,0,.25)";
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove("hidden");
+      }
+    });
+
+    // ── Init ───────────────────────────────────────────────
+    async function loadAllWorkouts() {
+      allWorkouts = await api("/api/workouts/", "GET");
+      renderCalendar();
+    }
+
+    initUnitToggle(() => { if (selectedDateStr) renderDayPanel(); });
+    selectedDateStr = makeDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+    Promise.all([loadAllWorkouts(), loadMaxes()]).then(() => renderDayPanel());
   </script>
 </body>
 </html>

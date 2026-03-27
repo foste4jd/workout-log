@@ -28,10 +28,10 @@ def register():
 @users_bp.post("/login")
 def login():
     data = request.get_json()
-    if not data or not data.get("email") or not data.get("password"):
-        return jsonify({"error": "email and password are required"}), 400
+    if not data or not data.get("username") or not data.get("password"):
+        return jsonify({"error": "username and password are required"}), 400
 
-    user = User.query.filter_by(email=data["email"]).first()
+    user = User.query.filter_by(username=data["username"]).first()
     if not user or not bcrypt.check_password_hash(user.password_hash, data["password"]):
         return jsonify({"error": "Invalid credentials"}), 401
 

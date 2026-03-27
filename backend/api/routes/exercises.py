@@ -47,3 +47,21 @@ def delete_exercise(exercise_id):
         return jsonify({"error": "Exercise not found"}), 404
     exercise_service.delete_exercise(exercise)
     return jsonify({"message": "Exercise deleted"})
+
+
+@exercises_bp.patch("/api/session-sets/<int:set_id>")
+@jwt_required()
+def patch_set(set_id):
+    """Update individual fields on a single set — used during gym execution."""
+    user_id = int(get_jwt_identity())
+    set_record = exercise_service.get_set(set_id)
+    if not set_record:
+        return jsonify({"error": "Set not found"}), 404
+    # Verify ownership via exercise → workout → user
+    exercise = exercise_service.get_exercise(set_record.exercise_id)
+    workout = workout_service.get_workout(exercise.workout_id, user_id)
+    if not workout:
+        return jsonify({"error": "Not found"}), 404
+    data = request.get_json() or {}
+    updated = exercise_service.update_set(set_record, data)
+    return jsonify(updated.to_dict())
