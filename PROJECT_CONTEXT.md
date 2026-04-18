@@ -1,4 +1,4 @@
-# WorkoutLog — Project Context
+# Barpath — Project Context
 
 Use this document to give an AI assistant full context when asking for feature ideas, implementation help, or code improvements. It is organized by domain so you can point an AI at only the section relevant to your task.
 
@@ -6,7 +6,7 @@ Use this document to give an AI assistant full context when asking for feature i
 
 ## What This App Is
 
-WorkoutLog is a personal strength-training tracker. It is a **single-user-per-account** tool. Each user logs their own sessions, tracks exercises with sets/reps/weight/percentages, manages training maxes for percentage-based programming, uses AI-generated workout suggestions, and reviews stats on a dashboard.
+Barpath is a personal strength-training tracker. It is a **single-user-per-account** tool. Each user logs their own sessions, tracks exercises with sets/reps/weight/percentages, manages training maxes for percentage-based programming, uses AI-generated workout suggestions, and reviews stats on a dashboard.
 
 It is **not** a social app — no sharing, no public profiles, no feed. The goal is a clean, fast, self-hosted utility for serious training. The UX philosophy is: **workout-first, fewer decisions, faster flow, calm UI**. Think premium utility, not feature-heavy product.
 

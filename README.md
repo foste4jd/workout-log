@@ -1,4 +1,4 @@
-# WorkoutLog
+# Barpath
 
 A self-hosted strength training tracker. Log workouts, run percentage-based programs, track personal records, and get AI-generated workout suggestions — all from a clean, mobile-first web UI.
 

@@ -1,4 +1,4 @@
-# WorkoutLog — Product Roadmap
+# Barpath — Product Roadmap
 
 Last updated: 2026-04-17
 Source: Full multi-perspective codebase review (security, architecture, performance, UX) — two full passes
@@ -213,7 +213,7 @@ Sourced from full UI/UX audit (2026-04-16). Every page was reviewed against the 
 | P1 | **Fix bottom nav label: "Profile" → "Stats"** | `/dashboard` is a stats page, not a profile/account page. Mislabeled on every page. |
 | P1 | **Remove gradient text from `index.html`** | `hero h1 span` uses `background-clip: text` with a gradient — hard banned in design system. |
 | P1 | **Eliminate inline `style=""` attributes** | Hundreds of scattered inline styles make the design unmaintainable. Move to CSS classes and tokens. |
-| P2 | **Fix `programs.html` navbar logo** | `<span class="nav-logo">Programs</span>` — bug. Should be "WorkoutLog". |
+| P2 | **Fix `programs.html` navbar logo** | `<span class="nav-logo">Programs</span>` — bug. Should be "Barpath". |
 | P2 | **Standardize `%TM` / `% of TM` / `%` column header** | Three different labels for the same concept across log, session, and templates. Pick one. |
 
 ### 🟠 Session Page (`/session`) — highest priority screen
