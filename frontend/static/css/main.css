@@ -6,18 +6,19 @@
 
 :root {
   /* ── Palette (OKLCH — perceptually uniform) ─────────── */
-  --bg:            oklch(7.5% 0.012 232);
-  --surface:       oklch(11%  0.014 232);
-  --surface-2:     oklch(15%  0.015 232);
-  --surface-3:     oklch(18%  0.016 232);
-  --border:        oklch(22%  0.016 232);
-  --border-strong: oklch(29%  0.018 232);
+  /* Base: warm charcoal — hue 30 (iron / chalk / gym leather) */
+  --bg:            oklch(7%   0.010 30);
+  --surface:       oklch(11%  0.013 30);
+  --surface-2:     oklch(15%  0.015 30);
+  --surface-3:     oklch(19%  0.017 30);
+  --border:        oklch(23%  0.016 30);
+  --border-strong: oklch(31%  0.019 30);
 
-  /* ── Accent — restrained steel ──────────────────────── */
-  --accent:       oklch(58% 0.12 232);
-  --accent-hover: oklch(53% 0.12 232);
-  --accent-dim:   oklch(58% 0.12 232 / .10);
-  --accent-dim-2: oklch(58% 0.12 232 / .18);
+  /* ── Accent — burnished amber / iron ────────────────── */
+  --accent:       oklch(68% 0.16 55);
+  --accent-hover: oklch(63% 0.16 55);
+  --accent-dim:   oklch(68% 0.16 55 / .10);
+  --accent-dim-2: oklch(68% 0.16 55 / .18);
 
   /* ── Semantic ───────────────────────────────────────── */
   --success:       oklch(62% 0.17 145);
@@ -27,10 +28,10 @@
   --danger-hover:  oklch(53% 0.20 14);
   --danger-dim:    oklch(58% 0.20 14 / .10);
 
-  /* ── Text ───────────────────────────────────────────── */
-  --text:       oklch(93% 0.006 232);
-  --text-2:     oklch(73% 0.010 232);
-  --text-muted: oklch(46% 0.012 232);
+  /* ── Text — warm off-white / gray ───────────────────── */
+  --text:       oklch(94% 0.005 30);
+  --text-2:     oklch(74% 0.009 30);
+  --text-muted: oklch(48% 0.011 30);
 
   /* ── Radius ─────────────────────────────────────────── */
   --radius-sm:  5px;
