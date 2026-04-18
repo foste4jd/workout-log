@@ -3,98 +3,339 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login – WorkoutLog</title>
-  <link rel="stylesheet" href="/static/css/main.css" />
+  <title>Sign In – WorkoutLog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700;800&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           oklch(7% 0.013 232);
+      --surface:      oklch(11% 0.015 232);
+      --surface-2:    oklch(14% 0.016 232);
+      --border:       oklch(20% 0.017 232);
+      --border-strong:oklch(27% 0.018 232);
+      --text:         oklch(93% 0.006 232);
+      --text-2:       oklch(73% 0.010 232);
+      --text-muted:   oklch(47% 0.014 232);
+      --accent:       oklch(60% 0.13 232);
+      --accent-dim:   oklch(60% 0.13 232 / 0.12);
+      --danger:       oklch(58% 0.21 14);
+      --danger-dim:   oklch(58% 0.21 14 / 0.10);
+      /* ruled-line color — very faint, references training journal paper */
+      --rule:         oklch(13% 0.013 232);
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      background-image: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 31px,
+        var(--rule) 31px,
+        var(--rule) 32px
+      );
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ── Shell ─────────────────────────────────────── */
+    .auth-shell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 44px 28px 36px;
+    }
+
+    /* ── Wordmark ──────────────────────────────────── */
+    .wordmark {
+      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 1.05rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 56px;
+    }
+
+    .wordmark strong {
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    /* ── Heading ───────────────────────────────────── */
+    .auth-heading {
+      margin-bottom: 36px;
+    }
+
+    .auth-heading h1 {
+      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 2.1rem;
+      letter-spacing: -0.01em;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .auth-heading .sub {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .auth-heading .sub a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .auth-heading .sub a:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* ── Form ──────────────────────────────────────── */
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .auth-form.hidden { display: none !important; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .field label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-muted);
+    }
+
+    .field input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      font-family: 'Hanken Grotesk', sans-serif;
+      font-size: 1rem;
+      font-weight: 400;
+      padding: 13px 14px;
+      outline: none;
+      transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+      -webkit-appearance: none;
+      width: 100%;
+    }
+
+    .field input:focus {
+      background: var(--surface-2);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .field input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.55;
+    }
+
+    /* ── Actions ───────────────────────────────────── */
+    .form-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: oklch(96% 0.005 232);
+      border: none;
+      border-radius: 5px;
+      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.12s, transform 0.1s;
+    }
+
+    .btn-submit:hover  { opacity: 0.88; }
+    .btn-submit:active { transform: scale(0.985); opacity: 0.8; }
+
+    /* ── Error ─────────────────────────────────────── */
+    .form-error {
+      font-size: 0.825rem;
+      color: var(--danger);
+      font-weight: 500;
+      padding: 10px 13px;
+      background: var(--danger-dim);
+      border-radius: 4px;
+      line-height: 1.4;
+    }
+
+    .form-error.hidden { display: none !important; }
+
+    /* ── Footer ────────────────────────────────────── */
+    .auth-footer {
+      margin-top: auto;
+      padding-top: 40px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .auth-footer::before {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .auth-footer span {
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .auth-footer::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+  </style>
 </head>
-<body class="auth-page">
+<body>
 
-  <div class="auth-card">
-    <h1 class="auth-logo">WorkoutLog</h1>
+  <div class="auth-shell">
 
-    <div class="tab-bar">
-      <button class="tab active" data-tab="login">Login</button>
-      <button class="tab" data-tab="register">Register</button>
+    <div class="wordmark"><strong>Workout</strong>Log</div>
+
+    <div class="auth-heading">
+      <h1 id="heading-title">Welcome back.</h1>
+      <p class="sub" id="heading-sub">
+        No account? <a onclick="switchTo('register')">Create one.</a>
+      </p>
     </div>
 
-    <!-- Login form -->
-    <form id="login-form" class="auth-form">
-      <div class="form-group">
+    <!-- Login -->
+    <form id="login-form" class="auth-form" autocomplete="on" novalidate>
+      <div class="field">
         <label for="login-username">Username</label>
-        <input id="login-username" type="text" placeholder="admin" required />
+        <input id="login-username" type="text" placeholder="Your username"
+               autocomplete="username" required />
       </div>
-      <div class="form-group">
+      <div class="field">
         <label for="login-password">Password</label>
-        <input id="login-password" type="password" placeholder="••••••••" required />
+        <input id="login-password" type="password" placeholder="••••••••"
+               autocomplete="current-password" required />
       </div>
       <p id="login-error" class="form-error hidden"></p>
-      <button type="submit" class="btn btn-primary btn-full">Login</button>
+      <div class="form-actions">
+        <button type="submit" class="btn-submit">Sign In</button>
+      </div>
     </form>
 
-    <!-- Register form -->
-    <form id="register-form" class="auth-form hidden">
-      <div class="form-group">
+    <!-- Register -->
+    <form id="register-form" class="auth-form hidden" autocomplete="on" novalidate>
+      <div class="field">
         <label for="reg-username">Username</label>
-        <input id="reg-username" type="text" placeholder="johndoe" required />
+        <input id="reg-username" type="text" placeholder="Your username"
+               autocomplete="username" required />
       </div>
-      <div class="form-group">
+      <div class="field">
         <label for="reg-email">Email</label>
-        <input id="reg-email" type="email" placeholder="you@example.com" required />
+        <input id="reg-email" type="email" placeholder="you@example.com"
+               autocomplete="email" required />
       </div>
-      <div class="form-group">
+      <div class="field">
         <label for="reg-password">Password</label>
-        <input id="reg-password" type="password" placeholder="••••••••" required />
+        <input id="reg-password" type="password" placeholder="••••••••"
+               autocomplete="new-password" required />
       </div>
       <p id="register-error" class="form-error hidden"></p>
-      <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+      <div class="form-actions">
+        <button type="submit" class="btn-submit">Create Account</button>
+      </div>
     </form>
+
+    <footer class="auth-footer">
+      <span>Personal training tracker</span>
+    </footer>
+
   </div>
 
   <script src="/static/js/main.js"></script>
   <script>
-    if (localStorage.getItem("token")) window.location.href = "/workouts";
+    function switchTo(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('login-form').classList.toggle('hidden', !isLogin);
+      document.getElementById('register-form').classList.toggle('hidden', isLogin);
+      document.getElementById('heading-title').textContent =
+        isLogin ? 'Welcome back.' : 'Create an account.';
+      document.getElementById('heading-sub').innerHTML = isLogin
+        ? 'No account? <a onclick="switchTo(\'register\')">Create one.</a>'
+        : 'Already have one? <a onclick="switchTo(\'login\')">Sign in.</a>';
+    }
 
-    // Tab switching
-    document.querySelectorAll(".tab").forEach(tab => {
-      tab.addEventListener("click", () => {
-        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-        tab.classList.add("active");
-        document.querySelectorAll(".auth-form").forEach(f => f.classList.add("hidden"));
-        document.getElementById(tab.dataset.tab + "-form").classList.remove("hidden");
-      });
-    });
-
-    document.getElementById("login-form").addEventListener("submit", async e => {
+    document.getElementById('login-form').addEventListener('submit', async e => {
       e.preventDefault();
-      const errorEl = document.getElementById("login-error");
+      const errorEl = document.getElementById('login-error');
+      errorEl.classList.add('hidden');
       try {
-        const data = await api("/api/users/login", "POST", {
-          username: document.getElementById("login-username").value,
-          password: document.getElementById("login-password").value,
+        const data = await api('/api/users/login', 'POST', {
+          username: document.getElementById('login-username').value,
+          password: document.getElementById('login-password').value,
         });
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("username", data.user.username);
-        window.location.href = "/workouts";
+        if (data?.user) localStorage.setItem('unit', data.user.unit || 'lb');
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz) await api('/api/users/me', 'PATCH', { timezone: tz }).catch(() => {});
+        window.location.href = '/workouts';
       } catch (err) {
         errorEl.textContent = err.message;
-        errorEl.classList.remove("hidden");
+        errorEl.classList.remove('hidden');
       }
     });
 
-    document.getElementById("register-form").addEventListener("submit", async e => {
+    document.getElementById('register-form').addEventListener('submit', async e => {
       e.preventDefault();
-      const errorEl = document.getElementById("register-error");
+      const errorEl = document.getElementById('register-error');
+      errorEl.classList.add('hidden');
       try {
-        const data = await api("/api/users/register", "POST", {
-          username: document.getElementById("reg-username").value,
-          email: document.getElementById("reg-email").value,
-          password: document.getElementById("reg-password").value,
+        await api('/api/users/register', 'POST', {
+          username: document.getElementById('reg-username').value,
+          email:    document.getElementById('reg-email').value,
+          password: document.getElementById('reg-password').value,
         });
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("username", data.user.username);
-        window.location.href = "/workouts";
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz) await api('/api/users/me', 'PATCH', { timezone: tz }).catch(() => {});
+        window.location.href = '/workouts';
       } catch (err) {
         errorEl.textContent = err.message;
-        errorEl.classList.remove("hidden");
+        errorEl.classList.remove('hidden');
       }
     });
   </script>

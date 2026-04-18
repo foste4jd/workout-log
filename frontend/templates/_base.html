@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}WorkoutLog{% endblock %}</title>
+  {# Preconnect hints shave ~100ms off first font request #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/static/css/main.css" />
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}app-page{% endblock %}">
+
+  {# ── Top bar ─────────────────────────────────────────────── #}
+  {% block navbar %}{% include '_navbar.html' %}{% endblock %}
+
+  {# ── Page content ────────────────────────────────────────── #}
+  {% block content %}{% endblock %}
+
+  {# ── Bottom navigation ───────────────────────────────────── #}
+  {# Pages that replace this (e.g. session) override with an empty block #}
+  {% block bottom_nav %}{% include '_bottom_nav.html' %}{% endblock %}
+
+  {# ── Scripts ─────────────────────────────────────────────── #}
+  <script src="/static/js/main.js"></script>
+  <script>
+    {# Every authenticated page needs logout wired up. #}
+    {# initLogout() looks for #logout-btn — safe to call even if absent. #}
+    initLogout();
+    (function syncTimezone() {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) api('/api/users/me', 'PATCH', { timezone: tz }).catch(() => {});
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+
+</body>
+</html>

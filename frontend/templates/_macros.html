@@ -1,0 +1,110 @@
+{#
+  Shared Jinja2 macros.
+  Import in any template:
+    {% from '_macros.html' import page_header, form_error, empty_state, tm_badge %}
+#}
+
+{# ── Page header ─────────────────────────────────────────────────────────────
+   Renders a consistent <header> block.
+   title     — required
+   subtitle  — optional secondary line
+   actions   — optional HTML string injected on the right side
+#}
+{% macro page_header(title, subtitle='', actions='') %}
+<header class="page-header">
+  <div class="page-header-text">
+    <h1 class="page-title">{{ title }}</h1>
+    {% if subtitle %}<p class="page-subtitle">{{ subtitle }}</p>{% endif %}
+  </div>
+  {% if actions %}
+  <div class="page-header-actions">{{ actions|safe }}</div>
+  {% endif %}
+</header>
+{% endmacro %}
+
+{# ── Form error ───────────────────────────────────────────────────────────────
+   Shows a validation/API error message.
+   message — the error string; renders nothing if falsy
+#}
+{% macro form_error(message) %}
+{% if message %}
+<div class="form-error" role="alert">{{ message }}</div>
+{% endif %}
+{% endmacro %}
+
+{# ── Empty state ──────────────────────────────────────────────────────────────
+   icon_svg  — raw SVG string (optional)
+   heading   — main message
+   body      — supporting text (optional)
+   cta_html  — call-to-action HTML (optional)
+#}
+{% macro empty_state(heading, body='', icon_svg='', cta_html='') %}
+<div class="empty-state">
+  {% if icon_svg %}<div class="empty-state-icon">{{ icon_svg|safe }}</div>{% endif %}
+  <p class="empty-state-heading">{{ heading }}</p>
+  {% if body %}<p class="empty-state-body">{{ body }}</p>{% endif %}
+  {% if cta_html %}<div class="empty-state-cta">{{ cta_html|safe }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{# ── Training max badge ───────────────────────────────────────────────────────
+   Renders a small badge showing the TM value.
+   tm    — numeric value in lbs (or None)
+   label — prefix label (default: "TM")
+#}
+{% macro tm_badge(tm, label='TM') %}
+{% if tm %}
+<span class="tm-badge">{{ label }} {{ tm }}</span>
+{% endif %}
+{% endmacro %}
+
+{# ── Modal shell ──────────────────────────────────────────────────────────────
+   id    — required, used by openModal(id)/closeModal(id)
+   title — modal header title
+   caller() renders the modal body content
+#}
+{% macro modal(id, title='') %}
+<div id="{{ id }}" class="modal-overlay" role="dialog" aria-modal="true"
+     aria-labelledby="{{ id }}-title">
+  <div class="modal-box">
+    {% if title %}
+    <div class="modal-header">
+      <h2 class="modal-title" id="{{ id }}-title">{{ title }}</h2>
+      <button class="btn-icon modal-close-btn" onclick="closeModal('{{ id }}')"
+              aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    {% endif %}
+    {{ caller() }}
+  </div>
+</div>
+{% endmacro %}
+
+{# ── Sheet shell ──────────────────────────────────────────────────────────────
+   id    — required, used by openSheet(id)/closeSheet(id)
+   title — sheet handle title (optional)
+   caller() renders the sheet body content
+#}
+{% macro sheet(id, title='') %}
+<div id="{{ id }}-overlay" class="sheet-overlay" onclick="closeSheet('{{ id }}')"></div>
+<div id="{{ id }}" class="sheet-panel" role="dialog" aria-modal="true">
+  <div class="sheet-handle"></div>
+  {% if title %}
+  <div class="sheet-header">
+    <span class="sheet-title">{{ title }}</span>
+    <button class="btn-icon sheet-close-btn" onclick="closeSheet('{{ id }}')"
+            aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  {% endif %}
+  {{ caller() }}
+</div>
+{% endmacro %}

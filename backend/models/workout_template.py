@@ -76,7 +76,7 @@ class WorkoutTemplateSet(db.Model):
     set_number = db.Column(db.Integer, nullable=False)
     set_type = db.Column(db.String(20), nullable=False, default="working")
     reps = db.Column(db.Integer)
-    weight = db.Column(db.Float)
+    weight_lb = db.Column(db.Float)
     percent = db.Column(db.Float)
     duration_seconds = db.Column(db.Integer)
 
@@ -86,7 +86,7 @@ class WorkoutTemplateSet(db.Model):
             "set_number": self.set_number,
             "set_type": self.set_type,
             "reps": self.reps,
-            "weight": self.weight,
+            "weight_lb": self.weight_lb,
             "percent": self.percent,
             "duration_seconds": self.duration_seconds,
         }

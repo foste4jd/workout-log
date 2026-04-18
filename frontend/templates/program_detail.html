@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Program – WorkoutLog</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <style>
+    /* ── View mode ──────────────────────────────────────────── */
+    .pd-week { margin-bottom:1.5rem; }
+    .pd-week-header {
+      font-size:.78rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.06em; color:var(--text-muted);
+      margin-bottom:.5rem; padding-bottom:.3rem; border-bottom:1px solid var(--border);
+    }
+    .pd-day-card {
+      background:var(--surface); border:1px solid var(--border); border-radius:10px;
+      padding:.75rem 1rem; margin-bottom:.5rem;
+      display:flex; justify-content:space-between; align-items:center; gap:.75rem;
+    }
+    .pd-day-info { flex:1; min-width:0; }
+    .pd-day-label { font-weight:600; font-size:.9rem; }
+    .pd-day-template { font-size:.8rem; color:var(--text-muted); margin-top:.15rem; }
+    .pd-day-rest { font-style:italic; color:var(--text-muted); font-size:.85rem; }
+    .pd-empty { text-align:center; color:var(--text-muted); padding:2rem 0; font-size:.9rem; }
+    .pd-meta { font-size:.82rem; color:var(--text-muted); margin-bottom:1rem; }
+    .pd-header-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:.3rem; }
+
+    /* ── Edit mode ──────────────────────────────────────────── */
+    .edit-banner {
+      background:var(--accent); color:#fff; font-size:.8rem; font-weight:600;
+      text-align:center; padding:.35rem; margin-bottom:1rem; border-radius:6px;
+    }
+    .ed-week { margin-bottom:1.25rem; }
+    .ed-week-header {
+      display:flex; align-items:center; justify-content:space-between;
+      font-size:.78rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:.06em; color:var(--text-muted);
+      margin-bottom:.5rem; padding-bottom:.3rem; border-bottom:1px solid var(--border);
+    }
+    .ed-day-row {
+      background:var(--surface); border:1px solid var(--border); border-radius:10px;
+      padding:.6rem .75rem; margin-bottom:.4rem;
+      display:grid; grid-template-columns:1fr 1fr auto; gap:.5rem; align-items:center;
+    }
+    .ed-day-row input[type=text], .ed-day-row select {
+      padding:.35rem .5rem; border:1px solid var(--border); border-radius:6px;
+      background:var(--bg); color:var(--text-primary); font-size:.85rem; width:100%;
+    }
+    .ed-add-day-btn {
+      font-size:.8rem; color:var(--accent); background:none; border:1px dashed var(--accent);
+      border-radius:8px; padding:.35rem .75rem; cursor:pointer; width:100%; margin-top:.25rem;
+    }
+    .ed-add-week-btn {
+      font-size:.82rem; color:var(--accent); background:none; border:1px dashed var(--accent);
+      border-radius:8px; padding:.4rem 1rem; cursor:pointer; display:block;
+      width:100%; margin-bottom:1rem;
+    }
+    .ed-save-row {
+      display:flex; gap:.6rem; margin-top:1rem;
+      position:sticky; bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);
+    }
+    .ed-save-row .btn { flex:1; }
+    .ed-error { color:var(--danger); font-size:.82rem; margin-top:.4rem; }
+  </style>
+</head>
+<body class="app-page">
+
+  <nav class="navbar">
+    <a href="/programs" class="btn-icon" style="margin-right:.25rem" title="Back">&#8249;</a>
+    <span class="nav-logo" id="nav-program-name">Program</span>
+    <div class="nav-right">
+      <button id="edit-schedule-btn" class="btn btn-ghost btn-sm" style="margin-right:.25rem">Edit Schedule</button>
+      <button id="logout-btn" class="btn-logout" title="Sign out">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <main class="container" style="padding-bottom:7rem">
+    <div id="pd-content"><p style="color:var(--text-muted);text-align:center;padding:3rem 0">Loading…</p></div>
+  </main>
+
+  <!-- Start session modal -->
+  <div id="start-session-overlay" class="modal-overlay hidden">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>Start Session</h3>
+        <button class="btn-icon" id="close-start-btn">&times;</button>
+      </div>
+      <div class="form-group">
+        <label for="start-date-input">Date</label>
+        <input type="date" id="start-date-input" />
+      </div>
+      <p id="start-error" class="form-error hidden"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancel-start-btn">Cancel</button>
+        <button class="btn btn-primary" id="confirm-start-btn">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    const PROGRAM_ID = {{ program_id }};
+    let program = null;
+    let templates = [];
+    let startingDayId = null;
+    let editMode = false;
+
+    // edDays: [{weekNumber, dayOrder, label, templateId}]
+    let edDays = [];
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await api("/api/users/logout", "POST");
+      window.location.href = "/login";
+    });
+
+    // ── Load data ──────────────────────────────────────────────
+    async function init() {
+      [program, templates] = await Promise.all([
+        api(`/api/programs/${PROGRAM_ID}`),
+        api("/api/templates/"),
+      ]);
+      document.getElementById("nav-program-name").textContent = program.name;
+      document.title = `${program.name} – WorkoutLog`;
+      renderView();
+    }
+
+    // ── View mode ──────────────────────────────────────────────
+    function groupByWeek(days) {
+      const m = {};
+      for (const d of days) {
+        if (!m[d.week_number]) m[d.week_number] = [];
+        m[d.week_number].push(d);
+      }
+      return m;
+    }
+
+    function renderView() {
+      editMode = false;
+      document.getElementById("edit-schedule-btn").textContent = "Edit Schedule";
+      const days = (program.days || []).slice().sort((a, b) =>
+        a.week_number - b.week_number || a.day_order - b.day_order
+      );
+      const weeks = groupByWeek(days);
+      const weekNums = Object.keys(weeks).map(Number).sort((a, b) => a - b);
+
+      const startStr = program.start_date
+        ? new Date(program.start_date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+        : null;
+
+      let html = `
+        <div class="pd-header-row">
+          <h2 style="margin:0;font-size:1.1rem">${escapeHtml(program.name)}</h2>
+        </div>
+        <div class="pd-meta">
+          ${program.total_weeks} week program
+          ${startStr ? ` · Started ${startStr}` : ""}
+          ${program.description ? ` · ${escapeHtml(program.description)}` : ""}
+        </div>`;
+
+      if (!days.length) {
+        html += `<div class="pd-empty">No days scheduled yet.<br>Click <strong>Edit Schedule</strong> to build your weekly plan.</div>`;
+      } else {
+        for (const wn of weekNums) {
+          const wDays = weeks[wn].slice().sort((a, b) => a.day_order - b.day_order);
+          html += `<div class="pd-week"><div class="pd-week-header">Week ${wn}</div>`;
+          for (const day of wDays) {
+            if (day.template_id) {
+              html += `
+                <div class="pd-day-card">
+                  <div class="pd-day-info">
+                    <div class="pd-day-label">${day.label ? escapeHtml(day.label) : `Day ${day.day_order}`}</div>
+                    <div class="pd-day-template">${day.template_name ? escapeHtml(day.template_name) : "Template"}</div>
+                  </div>
+                  <button class="btn btn-primary btn-sm start-day-btn" data-day-id="${day.id}">Start</button>
+                </div>`;
+            } else {
+              html += `
+                <div class="pd-day-card">
+                  <div class="pd-day-info">
+                    <div class="pd-day-rest">${day.label ? escapeHtml(day.label) : `Day ${day.day_order} — Rest`}</div>
+                  </div>
+                </div>`;
+            }
+          }
+          html += '</div>';
+        }
+      }
+
+      document.getElementById("pd-content").innerHTML = html;
+      document.querySelectorAll(".start-day-btn").forEach(btn =>
+        btn.addEventListener("click", () => openStartModal(parseInt(btn.dataset.dayId)))
+      );
+    }
+
+    // ── Edit mode ──────────────────────────────────────────────
+    function enterEditMode() {
+      editMode = true;
+      document.getElementById("edit-schedule-btn").textContent = "View Schedule";
+
+      // Seed edDays from current program days
+      edDays = (program.days || []).slice()
+        .sort((a, b) => a.week_number - b.week_number || a.day_order - b.day_order)
+        .map(d => ({ weekNumber: d.week_number, dayOrder: d.day_order, label: d.label || "", templateId: d.template_id || "" }));
+
+      // If no days, seed with week 1 empty
+      if (!edDays.length) {
+        const totalWeeks = program.total_weeks || 1;
+        for (let w = 1; w <= totalWeeks; w++) {
+          edDays.push({ weekNumber: w, dayOrder: 1, label: "", templateId: "" });
+        }
+      }
+
+      renderEditor();
+    }
+
+    function renderEditor() {
+      const tplOptions = templates.map(t =>
+        `<option value="${t.id}">${escapeHtml(t.name)}</option>`
+      ).join("");
+
+      // Group edDays by week
+      const weeks = {};
+      edDays.forEach((d, idx) => {
+        if (!weeks[d.weekNumber]) weeks[d.weekNumber] = [];
+        weeks[d.weekNumber].push({ ...d, idx });
+      });
+      const weekNums = Object.keys(weeks).map(Number).sort((a, b) => a - b);
+
+      let html = `<div class="edit-banner">Editing schedule — changes save when you press Save</div>`;
+
+      for (const wn of weekNums) {
+        const wDays = weeks[wn].slice().sort((a, b) => a.dayOrder - b.dayOrder);
+        html += `
+          <div class="ed-week" data-week="${wn}">
+            <div class="ed-week-header">
+              <span>Week ${wn}</span>
+              <button class="btn-icon remove-week-btn" data-week="${wn}" title="Remove week">&times;</button>
+            </div>
+            <div style="font-size:.7rem;color:var(--text-muted);display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;padding:0 .1rem .25rem">
+              <span>Label (optional)</span><span>Template (blank = rest)</span><span></span>
+            </div>`;
+        for (const d of wDays) {
+          html += `
+            <div class="ed-day-row" data-idx="${d.idx}">
+              <input type="text" class="ed-label" placeholder="e.g. Monday / Squat A" value="${escapeHtml(d.label)}" />
+              <select class="ed-template">
+                <option value="">— Rest day —</option>
+                ${tplOptions}
+              </select>
+              <button class="btn-icon remove-day-btn" data-idx="${d.idx}" title="Remove day">&times;</button>
+            </div>`;
+        }
+        html += `
+            <button class="ed-add-day-btn" data-week="${wn}">+ Add day to Week ${wn}</button>
+          </div>`;
+      }
+
+      const maxWeek = weekNums.length ? Math.max(...weekNums) : 0;
+      html += `<button class="ed-add-week-btn" data-next-week="${maxWeek + 1}">+ Add Week ${maxWeek + 1}</button>`;
+      html += `<p class="ed-error hidden" id="ed-error"></p>`;
+      html += `
+        <div class="ed-save-row">
+          <button class="btn btn-ghost" id="ed-cancel-btn">Cancel</button>
+          <button class="btn btn-primary" id="ed-save-btn">Save Schedule</button>
+        </div>`;
+
+      document.getElementById("pd-content").innerHTML = html;
+
+      // Set template selects to current values
+      document.querySelectorAll(".ed-day-row").forEach(row => {
+        const idx = parseInt(row.dataset.idx);
+        const sel = row.querySelector(".ed-template");
+        sel.value = edDays[idx].templateId || "";
+        sel.addEventListener("change", () => { edDays[idx].templateId = sel.value || ""; });
+        row.querySelector(".ed-label").addEventListener("input", e => { edDays[idx].label = e.target.value; });
+        row.querySelector(".remove-day-btn").addEventListener("click", () => {
+          edDays.splice(idx, 1);
+          reindexAndRender();
+        });
+      });
+
+      document.querySelectorAll(".ed-add-day-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const wn = parseInt(btn.dataset.week);
+          const wkDays = edDays.filter(d => d.weekNumber === wn);
+          const nextOrder = wkDays.length ? Math.max(...wkDays.map(d => d.dayOrder)) + 1 : 1;
+          edDays.push({ weekNumber: wn, dayOrder: nextOrder, label: "", templateId: "" });
+          renderEditor();
+        });
+      });
+
+      document.querySelectorAll(".remove-week-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const wn = parseInt(btn.dataset.week);
+          edDays = edDays.filter(d => d.weekNumber !== wn);
+          reindexAndRender();
+        });
+      });
+
+      document.querySelector(".ed-add-week-btn").addEventListener("click", e => {
+        const wn = parseInt(e.currentTarget.dataset.nextWeek);
+        edDays.push({ weekNumber: wn, dayOrder: 1, label: "", templateId: "" });
+        renderEditor();
+      });
+
+      document.getElementById("ed-cancel-btn").addEventListener("click", renderView);
+      document.getElementById("ed-save-btn").addEventListener("click", saveSchedule);
+    }
+
+    function reindexAndRender() {
+      // Re-assign day_order per week after removals
+      const byWeek = {};
+      edDays.forEach(d => {
+        if (!byWeek[d.weekNumber]) byWeek[d.weekNumber] = [];
+        byWeek[d.weekNumber].push(d);
+      });
+      edDays = [];
+      Object.keys(byWeek).map(Number).sort((a, b) => a - b).forEach(wn => {
+        byWeek[wn].forEach((d, i) => { d.dayOrder = i + 1; edDays.push(d); });
+      });
+      renderEditor();
+    }
+
+    async function saveSchedule() {
+      const errEl = document.getElementById("ed-error");
+      errEl.classList.add("hidden");
+      const days = edDays.map((d, i) => ({
+        week_number: d.weekNumber,
+        day_order: d.dayOrder,
+        label: d.label || null,
+        template_id: d.templateId ? parseInt(d.templateId) : null,
+      }));
+      try {
+        program = await api(`/api/programs/${PROGRAM_ID}`, "PUT", { days });
+        renderView();
+      } catch {
+        errEl.textContent = "Failed to save schedule. Please try again.";
+        errEl.classList.remove("hidden");
+      }
+    }
+
+    // ── Edit schedule toggle ────────────────────────────────────
+    document.getElementById("edit-schedule-btn").addEventListener("click", () => {
+      if (editMode) renderView(); else enterEditMode();
+    });
+
+    // ── Start session modal ────────────────────────────────────
+    function openStartModal(dayId) {
+      startingDayId = dayId;
+      document.getElementById("start-date-input").value = new Date().toISOString().slice(0, 10);
+      document.getElementById("start-error").classList.add("hidden");
+      document.getElementById("start-session-overlay").classList.remove("hidden");
+    }
+    function closeStartModal() {
+      document.getElementById("start-session-overlay").classList.add("hidden");
+    }
+    document.getElementById("close-start-btn").addEventListener("click", closeStartModal);
+    document.getElementById("cancel-start-btn").addEventListener("click", closeStartModal);
+    document.getElementById("confirm-start-btn").addEventListener("click", async () => {
+      const errEl = document.getElementById("start-error");
+      errEl.classList.add("hidden");
+      const date = document.getElementById("start-date-input").value;
+      try {
+        const session = await api(`/api/programs/${PROGRAM_ID}/days/${startingDayId}/start`, "POST",
+          { date: date ? date + "T12:00:00" : null });
+        window.location.href = `/session/${session.id}`;
+      } catch {
+        errEl.textContent = "Failed to start session. Make sure the day has a template assigned.";
+        errEl.classList.remove("hidden");
+      }
+    });
+
+    init().catch(() => {
+      document.getElementById("pd-content").innerHTML =
+        '<p style="color:var(--danger);text-align:center;padding:3rem 0">Failed to load program.</p>';
+    });
+  </script>
+
+</body>
+</html>

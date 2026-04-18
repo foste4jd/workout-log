@@ -26,11 +26,14 @@ def create_exercise(workout_id, data):
             exercise_id=exercise.id,
             set_number=i,
             set_type=s.get("set_type", "working"),
+            planned_reps=s.get("planned_reps"),
+            planned_weight_lb=s.get("planned_weight_lb"),
+            planned_percent=s.get("planned_percent"),
             reps=s.get("reps"),
             weight_lb=s.get("weight_lb"),
             percent=s.get("percent"),
             duration_seconds=s.get("duration_seconds"),
-            completed=s.get("completed", True),
+            completed=s.get("completed", False),
         ))
 
     db.session.commit()
@@ -52,11 +55,14 @@ def update_exercise(exercise, data):
                 exercise_id=exercise.id,
                 set_number=i,
                 set_type=s.get("set_type", "working"),
+                planned_reps=s.get("planned_reps"),
+                planned_weight_lb=s.get("planned_weight_lb"),
+                planned_percent=s.get("planned_percent"),
                 reps=s.get("reps"),
                 weight_lb=s.get("weight_lb"),
                 percent=s.get("percent"),
                 duration_seconds=s.get("duration_seconds"),
-                completed=s.get("completed", True),
+                completed=s.get("completed", False),
             ))
 
     db.session.commit()
@@ -65,6 +71,12 @@ def update_exercise(exercise, data):
 
 def update_set(set_record, data):
     """Patch individual fields on a single set — used during gym execution."""
+    if "planned_reps" in data:
+        set_record.planned_reps = data["planned_reps"]
+    if "planned_weight_lb" in data:
+        set_record.planned_weight_lb = data["planned_weight_lb"]
+    if "planned_percent" in data:
+        set_record.planned_percent = data["planned_percent"]
     if "reps" in data:
         set_record.reps = data["reps"]
     if "weight_lb" in data:

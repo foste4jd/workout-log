@@ -1,13 +1,19 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
-from sqlalchemy import text
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_migrate import Migrate
 from backend.config import Config
 from backend.db.database import db
 
 bcrypt = Bcrypt()
 jwt = JWTManager()
+limiter = Limiter(key_func=get_remote_address, default_limits=[], storage_uri="memory://")
+migrate = Migrate()
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -23,18 +29,23 @@ def create_app():
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    limiter.init_app(app)
+    migrate.init_app(app, db)
 
     # ── Import all models so SQLAlchemy registers them ────────────────────────
     from backend.models.user import User  # noqa: F401
     from backend.models.workout import Workout  # noqa: F401
     from backend.models.exercise import Exercise  # noqa: F401
     from backend.models.exercise_set import ExerciseSet  # noqa: F401
-    from backend.models.personal_max import PersonalMax  # noqa: F401
     from backend.models.exercise_library import ExerciseLibrary  # noqa: F401
     from backend.models.training_max import TrainingMax  # noqa: F401
     from backend.models.workout_template import (  # noqa: F401
         WorkoutTemplate, WorkoutTemplateExercise, WorkoutTemplateSet
     )
+    from backend.models.ai_knowledge import AIKnowledge  # noqa: F401
+    from backend.models.program import Program, ProgramDay  # noqa: F401
+    from backend.models.user_profile import UserProfile  # noqa: F401
+    from backend.models.bodyweight_entry import BodyweightEntry  # noqa: F401
 
     # ── Register blueprints ───────────────────────────────────────────────────
     from backend.api.routes.users import users_bp
@@ -42,49 +53,42 @@ def create_app():
     from backend.api.routes.exercises import exercises_bp
     from backend.api.routes.views import views_bp
     from backend.api.routes.stats import stats_bp
-    from backend.api.routes.maxes import maxes_bp
     from backend.api.routes.library import library_bp
     from backend.api.routes.training_maxes import training_maxes_bp
     from backend.api.routes.templates import templates_bp
+    from backend.api.routes.ai_trainer import ai_trainer_bp
+    from backend.api.routes.programs import programs_bp
+    from backend.api.routes.profile import profile_bp
 
     for bp in (
         users_bp, workouts_bp, exercises_bp, views_bp, stats_bp,
-        maxes_bp, library_bp, training_maxes_bp, templates_bp,
+        library_bp, training_maxes_bp, templates_bp,
+        ai_trainer_bp, programs_bp, profile_bp,
     ):
         app.register_blueprint(bp)
 
+    @app.after_request
+    def add_security_headers(response):
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'"
+        )
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
     with app.app_context():
         db.create_all()
-        _run_migrations()
         _seed_exercise_library()
 
     return app
 
-
-# ── Schema migrations (SQLite ALTER TABLE) ────────────────────────────────────
-
-def _run_migrations():
-    """Add new columns to existing tables without Alembic.
-    Each statement is wrapped in try/except so re-runs are safe."""
-    migrations = [
-        # Workout: status and template_id
-        "ALTER TABLE workouts ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'completed'",
-        "ALTER TABLE workouts ADD COLUMN template_id INTEGER REFERENCES workout_templates(id)",
-        # Exercise: library foreign key
-        "ALTER TABLE exercises ADD COLUMN exercise_library_id INTEGER REFERENCES exercise_library(id)",
-        # ExerciseSet: new fields
-        "ALTER TABLE exercise_sets ADD COLUMN set_type VARCHAR(20) NOT NULL DEFAULT 'working'",
-        "ALTER TABLE exercise_sets ADD COLUMN percent FLOAT",
-        "ALTER TABLE exercise_sets ADD COLUMN duration_seconds INTEGER",
-        "ALTER TABLE exercise_sets ADD COLUMN completed BOOLEAN NOT NULL DEFAULT 1",
-    ]
-    with db.engine.connect() as conn:
-        for stmt in migrations:
-            try:
-                conn.execute(text(stmt))
-                conn.commit()
-            except Exception:
-                conn.rollback()
 
 
 # ── Exercise library seed ─────────────────────────────────────────────────────

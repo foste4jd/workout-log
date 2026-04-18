@@ -1,0 +1,254 @@
+{% extends '_base.html' %}
+
+{% block title %}Athlete Profile – WorkoutLog{% endblock %}
+
+{% block content %}
+<main class="account-container">
+
+  <div class="account-header">
+    <h1>Athlete Profile</h1>
+    <p>Personalization · Coaching · Analytics</p>
+  </div>
+
+  {# ── Athlete Profile section ──────────────────────────── #}
+  <section class="acct-section" id="section-athlete">
+    <div class="acct-section-header">
+      <span class="acct-section-title">Athlete Profile</span>
+      <span class="saved-badge" id="badge-athlete">Saved</span>
+    </div>
+
+    <div class="acct-field">
+      <span class="acct-field-label">Experience Level</span>
+      <div class="chip-group" id="chips-experience">
+        {% for val, label in [('beginner','Beginner'),('intermediate','Intermediate'),('advanced','Advanced'),('elite','Elite')] %}
+        <div class="chip">
+          <input type="radio" name="experience_level" id="exp-{{ val }}" value="{{ val }}">
+          <label for="exp-{{ val }}">{{ label }}</label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="acct-field">
+      <span class="acct-field-label">Current Bodyweight</span>
+      <div class="bw-log-row">
+        <div class="bw-input-wrap">
+          <input type="number" id="bw-input" placeholder="0" step="0.1" min="20" max="500" autocomplete="off">
+          <span class="bw-unit-label" id="bw-unit-label">lb</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="bw-log-btn" type="button">Log</button>
+      </div>
+      <div class="bw-history" id="bw-history"></div>
+    </div>
+  </section>
+
+  {# ── Training Identity section ─────────────────────────── #}
+  <section class="acct-section" id="section-training">
+    <div class="acct-section-header">
+      <span class="acct-section-title">Training Identity</span>
+      <span class="saved-badge" id="badge-training">Saved</span>
+    </div>
+
+    <div class="acct-field">
+      <span class="acct-field-label">Primary Goal</span>
+      <div class="chip-group" id="chips-goal">
+        {% for val, label in [('strength','Strength'),('hypertrophy','Hypertrophy'),('powerlifting','Powerlifting'),('general','General Fitness'),('endurance','Endurance')] %}
+        <div class="chip">
+          <input type="radio" name="primary_goal" id="goal-{{ val }}" value="{{ val }}">
+          <label for="goal-{{ val }}">{{ label }}</label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="acct-field">
+      <span class="acct-field-label">Training Days / Week</span>
+      <div class="freq-row">
+        <input type="number" class="freq-input" id="freq-input" min="1" max="7" placeholder="—" autocomplete="off">
+        <span class="freq-suffix">days per week</span>
+      </div>
+    </div>
+
+    <div class="acct-field">
+      <span class="acct-field-label">Intensity Style</span>
+      <div class="chip-group" id="chips-intensity">
+        {% for val, label in [('rpe','RPE'),('percentage','% 1RM'),('load','Load-based'),('auto','Auto')] %}
+        <div class="chip">
+          <input type="radio" name="preferred_intensity_style" id="int-{{ val }}" value="{{ val }}">
+          <label for="int-{{ val }}">{{ label }}</label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  {# ── Limitations section (collapsed by default) ────────── #}
+  <section class="acct-section" id="section-limits">
+    <div class="acct-section-header">
+      <button class="acct-section-toggle" id="limits-toggle" aria-expanded="false" aria-controls="limits-body" type="button">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+        Limitations
+      </button>
+      <span class="saved-badge" id="badge-limits">Saved</span>
+    </div>
+    <div class="acct-section-body" id="limits-body" hidden>
+      <div class="acct-field">
+        <span class="acct-field-label">Movement Restrictions</span>
+        <textarea class="acct-textarea" id="restrictions-input"
+          placeholder="e.g. No overhead pressing due to shoulder impingement, avoid heavy spinal loading"
+          rows="3"></textarea>
+      </div>
+    </div>
+  </section>
+
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+
+  /* ── State ──────────────────────────────────────────────── */
+  let unit = 'lb';
+
+  /* ── Badge helper ───────────────────────────────────────── */
+  function flash(badgeId) {
+    const el = document.getElementById(badgeId);
+    el.classList.add('visible');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('visible'), 1800);
+  }
+
+  /* ── API save (profile fields) ──────────────────────────── */
+  async function saveField(key, value, badgeId) {
+    try {
+      await api('/api/profile', 'PUT', { [key]: value });
+      flash(badgeId);
+    } catch (e) {
+      console.error('Profile save failed', e);
+    }
+  }
+
+  /* ── Chips: instant save on selection ───────────────────── */
+  function wireChips(name, badgeId) {
+    document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+      radio.addEventListener('change', () => {
+        saveField(name, radio.value, badgeId);
+      });
+    });
+  }
+
+  wireChips('experience_level',        'badge-athlete');
+  wireChips('primary_goal',            'badge-training');
+  wireChips('preferred_intensity_style','badge-training');
+
+  /* ── Frequency: debounced save on input ─────────────────── */
+  const freqInput = document.getElementById('freq-input');
+  let freqTimer;
+  freqInput.addEventListener('input', () => {
+    clearTimeout(freqTimer);
+    freqTimer = setTimeout(() => {
+      const v = freqInput.value ? parseInt(freqInput.value, 10) : null;
+      if (v === null || (v >= 1 && v <= 7)) {
+        saveField('training_frequency_target', v, 'badge-training');
+      }
+    }, 900);
+  });
+
+  /* ── Movement restrictions: debounced save ──────────────── */
+  const restrictionsInput = document.getElementById('restrictions-input');
+  let restrictTimer;
+  restrictionsInput.addEventListener('input', () => {
+    clearTimeout(restrictTimer);
+    restrictTimer = setTimeout(() => {
+      saveField('movement_restrictions', restrictionsInput.value, 'badge-limits');
+    }, 1200);
+  });
+
+  /* ── Bodyweight logging ──────────────────────────────────── */
+  function localDateStr() {
+    const d = new Date();
+    return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
+  }
+
+  function renderBwHistory(entries) {
+    const el = document.getElementById('bw-history');
+    if (!entries.length) {
+      el.innerHTML = '<p class="bw-empty">No entries yet.</p>';
+      return;
+    }
+    el.innerHTML = entries.map(e => {
+      const dateStr = new Date(e.recorded_date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      return `<div class="bw-entry">
+        <span class="bw-entry-weight">${e.weight} ${escapeHtml(e.unit)}</span>
+        <span class="bw-entry-date">${dateStr}</span>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('bw-log-btn').addEventListener('click', async () => {
+    const weightVal = parseFloat(document.getElementById('bw-input').value);
+    if (!weightVal || weightVal <= 0) return;
+    try {
+      await api('/api/profile/bodyweight', 'POST', { weight: weightVal, date: localDateStr() });
+      document.getElementById('bw-input').value = '';
+      flash('badge-athlete');
+      const res = await api('/api/profile/bodyweight?limit=5');
+      renderBwHistory(res.entries);
+    } catch (e) {
+      console.error('Bodyweight log failed', e);
+    }
+  });
+
+  /* ── Limitations toggle ─────────────────────────────────── */
+  const toggle = document.getElementById('limits-toggle');
+  const body   = document.getElementById('limits-body');
+  toggle.addEventListener('click', () => {
+    const expanded = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!expanded));
+    body.hidden = expanded;
+  });
+
+  /* ── Load initial data ──────────────────────────────────── */
+  async function load() {
+    try {
+      const data = await api('/api/profile');
+      unit = data.unit || 'lb';
+      document.getElementById('bw-unit-label').textContent = unit;
+
+      const p = data.profile || {};
+
+      if (p.experience_level) {
+        const radio = document.querySelector(`input[name=experience_level][value="${p.experience_level}"]`);
+        if (radio) radio.checked = true;
+      }
+      if (p.primary_goal) {
+        const radio = document.querySelector(`input[name=primary_goal][value="${p.primary_goal}"]`);
+        if (radio) radio.checked = true;
+      }
+      if (p.preferred_intensity_style) {
+        const radio = document.querySelector(`input[name=preferred_intensity_style][value="${p.preferred_intensity_style}"]`);
+        if (radio) radio.checked = true;
+      }
+      if (p.training_frequency_target) {
+        freqInput.value = p.training_frequency_target;
+      }
+      if (p.movement_restrictions) {
+        restrictionsInput.value = p.movement_restrictions;
+        toggle.setAttribute('aria-expanded', 'true');
+        body.hidden = false;
+      }
+
+      renderBwHistory(data.recent_bodyweight || []);
+    } catch (e) {
+      console.error('Profile load failed', e);
+    }
+  }
+
+  load();
+})();
+</script>
+{% endblock %}

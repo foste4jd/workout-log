@@ -14,7 +14,7 @@ class Workout(db.Model):
     # planned | in_progress | completed
     status = db.Column(db.String(20), nullable=False, default="completed")
     # set when created from a template (informational only — session is a snapshot)
-    template_id = db.Column(db.Integer, db.ForeignKey("workout_templates.id"), nullable=True)
+    template_id = db.Column(db.Integer, db.ForeignKey("workout_templates.id", ondelete="SET NULL"), nullable=True)
     exercises = db.relationship("Exercise", backref="workout", lazy=True, cascade="all, delete-orphan")
 
     def to_dict(self):

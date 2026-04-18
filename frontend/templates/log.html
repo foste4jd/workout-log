@@ -5,50 +5,485 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Log Workout – WorkoutLog</title>
   <link rel="stylesheet" href="/static/css/main.css" />
+  <style>
+    /* ── Date quick-select pills ──────────────────────────────── */
+    .date-quick-row {
+      display: flex;
+      gap: .35rem;
+      margin: .5rem 0 1rem;
+    }
+    .date-quick-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: .72rem;
+      font-weight: 600;
+      padding: .25rem .7rem;
+      cursor: pointer;
+      transition: border-color .12s, color .12s, background .12s;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+    .date-quick-btn:hover { border-color: var(--border-strong); color: var(--text-2); }
+    .date-quick-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* ── Natural language workout bar ────────────────────────── */
+    .nl-bar-wrap {
+      margin-bottom: 1.5rem;
+    }
+    .nl-bar-label {
+      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: .35rem;
+    }
+    .nl-bar-row {
+      display: flex;
+      gap: .4rem;
+      align-items: stretch;
+    }
+    .nl-input {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: inherit;
+      font-size: .88rem;
+      padding: .55rem .8rem;
+      outline: none;
+      min-width: 0;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .nl-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+    .nl-input::placeholder {
+      color: var(--text-muted);
+      opacity: .6;
+      font-size: .82rem;
+    }
+    .nl-submit-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      flex-shrink: 0;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: border-color .12s, color .12s, background .12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nl-submit-btn:hover  { border-color: var(--accent); color: var(--accent); }
+    .nl-submit-btn:active { background: var(--accent-dim); }
+    .nl-submit-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── NL interpretation preview ─────────────────────────── */
+    .nl-preview {
+      margin-top: .5rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .nl-preview:empty { display: none; }
+    .nl-preview-inner { padding: .7rem .9rem .6rem; }
+    .nl-preview-ex {
+      display: flex;
+      align-items: baseline;
+      gap: .6rem;
+      padding: .18rem 0;
+    }
+    .nl-preview-exname {
+      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
+      letter-spacing: .01em;
+      color: var(--text);
+      flex-shrink: 0;
+      min-width: 100px;
+    }
+    .nl-preview-exsets {
+      font-size: .78rem;
+      color: var(--text-2);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.4;
+    }
+    .nl-preview-divider {
+      margin: .55rem 0 .45rem;
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+    .nl-preview-assumptions {
+      font-size: .73rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .nl-preview-assumption::before { content: "ℹ "; }
+    .nl-confirm-flag {
+      font-size: .73rem;
+      color: oklch(65% 0.16 55);
+      margin-top: .3rem;
+    }
+    .nl-preview-actions {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-top: .6rem;
+    }
+    .nl-load-btn {
+      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      color: var(--accent);
+      padding: .35rem .85rem;
+      cursor: pointer;
+      transition: background .12s, color .12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nl-load-btn:hover { background: var(--accent); color: var(--bg); }
+    .nl-discard-btn {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: .75rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      transition: color .12s;
+    }
+    .nl-discard-btn:hover { color: var(--text-2); }
+    .nl-conf-tag {
+      margin-left: auto;
+      font-size: .68rem;
+      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-weight: 700;
+      letter-spacing: .05em;
+      color: var(--text-muted);
+    }
+
+    /* ── Quick set shorthand input ───────────────────────────── */
+    .quick-set-wrap { padding: .4rem 0 .15rem; }
+    .quick-set-input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: .85rem;
+      padding: .42rem .7rem;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .quick-set-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+    .quick-set-input::placeholder { color: var(--text-muted); opacity: .65; }
+    .quick-set-input.error { border-color: var(--danger); }
+
+    /* ── Sets count row (above persistent quick-set input) ───── */
+    .sets-count-row {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .25rem 0 .2rem;
+    }
+    .sets-count-label {
+      font-size: .72rem;
+      color: var(--text-2);
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+    .sets-reset-btn {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: .72rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      transition: color .12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sets-reset-btn:hover { color: var(--danger); }
+
+    /* ── Save status confirmation ─────────────────────────────── */
+    .log-save-status {
+      font-size: .75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-align: right;
+      margin-top: .4rem;
+      min-height: 1.1rem;
+    }
+    .log-save-status.planning { color: var(--accent); }
+    .log-save-status.past     { color: var(--text-muted); }
+
+    /* ── Post-save inline links ───────────────────────────── */
+    .link-btn {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: 600;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0;
+      text-decoration: none;
+    }
+    .link-btn:hover { text-decoration: underline; }
+
+    /* ── Title auto-update shimmer ────────────────────────── */
+    @keyframes title-shimmer {
+      0%   { color: var(--text); }
+      40%  { color: var(--accent); }
+      100% { color: var(--text); }
+    }
+    .log-title-input.ai-updated { animation: title-shimmer .7s ease-out forwards; }
+
+    /* ── Meta chip readability boost (log page override) ─── */
+    .log-meta-chip {
+      color: var(--text-2);
+      border-color: var(--border-strong);
+    }
+    .log-meta-chip input,
+    .log-meta-chip textarea { color: var(--text); }
+    .log-meta-chip input::placeholder,
+    .log-meta-chip textarea::placeholder { color: oklch(54% 0.012 232); }
+    .log-meta-chip svg { opacity: .8; }
+
+    /* ── Date chip trigger ────────────────────────────────── */
+    .date-chip {
+      cursor: pointer;
+      user-select: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      font-family: inherit;
+    }
+    .date-chip:hover  { border-color: var(--border-strong); color: var(--text-2); }
+    .date-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* ── Calendar popover ─────────────────────────────────── */
+    .cal-popover {
+      position: fixed;
+      z-index: 600;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: .9rem .8rem .8rem;
+      width: 272px;
+
+      /* exit state — fast ease-in */
+      opacity: 0;
+      transform: translateY(-5px) scale(.975);
+      pointer-events: none;
+      transition:
+        opacity  .10s ease-in,
+        transform .10s ease-in;
+      will-change: transform, opacity;
+    }
+    .cal-popover.open {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+      /* enter — expo ease-out, slightly longer */
+      transition:
+        opacity  .18s cubic-bezier(0.16, 1, 0.3, 1),
+        transform .18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ── Cal header ───────────────────────────────────────── */
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .6rem;
+    }
+    .cal-month-label {
+      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-size: .85rem;
+      font-weight: 700;
+      letter-spacing: .10em;
+      color: var(--text);
+      text-transform: uppercase;
+      text-align: center;
+      flex: 1;
+    }
+    .cal-nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      background: none;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-2);
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .10s, color .10s;
+      flex-shrink: 0;
+    }
+    .cal-nav-btn:hover { background: var(--surface-3); color: var(--text); }
+
+    /* ── Day-name row ─────────────────────────────────────── */
+    .cal-day-names {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      padding-bottom: .35rem;
+      border-bottom: 1px solid var(--border-strong);
+      margin-bottom: .3rem;
+    }
+    .cal-day-names span {
+      text-align: center;
+      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-size: .65rem;
+      font-weight: 600;
+      letter-spacing: .09em;
+      color: var(--text-2);
+      text-transform: uppercase;
+      line-height: 1.6;
+    }
+
+    /* ── Day grid ─────────────────────────────────────────── */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+    .cal-day {
+      width: 100%;
+      min-height: 34px;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Hanken Grotesk', sans-serif;
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      transition: background .08s, color .08s;
+      padding: 0;
+    }
+    .cal-day:hover:not(.selected) { background: var(--surface-3); }
+    .cal-day.other-month  { color: var(--text-muted); opacity: .55; }
+    .cal-day.other-month:hover:not(.selected) { opacity: .8; background: var(--surface-3); }
+
+    /* Today: accent dot below the number */
+    .cal-day.today { font-weight: 600; color: var(--text); }
+    .cal-day.today::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* Selected: solid accent fill */
+    .cal-day.selected {
+      background: var(--accent);
+      color: var(--text);
+      font-weight: 600;
+    }
+    .cal-day.selected:hover { background: var(--accent-hover); }
+    /* Keep dot visible on selected+today using near-white */
+    .cal-day.selected.today::after { background: oklch(93% 0.006 232 / .6); }
+  </style>
 </head>
 <body class="app-page">
 
   <nav class="navbar">
     <span class="nav-logo">WorkoutLog</span>
-    <div class="nav-links">
-      <a href="/dashboard" class="nav-link">Dashboard</a>
-      <a href="/workouts" class="nav-link">Workouts</a>
-      <a href="/templates" class="nav-link">Templates</a>
-      <a href="/maxes" class="nav-link">Maxes</a>
-    </div>
     <div class="nav-right">
-      <span id="nav-username"></span>
+      <span id="nav-username" style="display:none"></span>
       <button class="btn btn-ghost unit-toggle" title="Switch weight units">lbs</button>
-      <button id="logout-btn" class="btn btn-ghost">Logout</button>
+      <button id="logout-btn" class="btn-logout" title="Sign out">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
     </div>
   </nav>
 
   <main class="container" style="max-width:720px">
-    <div class="page-header">
-      <h2>Log Workout</h2>
+
+    <!-- Title -->
+    <input id="log-title" class="log-title-input" type="text" placeholder="Workout name…" autocomplete="off" />
+
+    <!-- Meta strip: date + notes + AI — duration removed -->
+    <div class="log-meta-strip">
+      <button class="log-meta-chip date-chip" id="date-chip-btn" type="button"
+        aria-haspopup="dialog" aria-expanded="false" aria-label="Select date">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span id="date-chip-label">—</span>
+      </button>
+      <input type="hidden" id="log-date" />
+      <label class="log-meta-chip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <input id="log-notes" type="text" placeholder="Notes…" />
+      </label>
+      <button class="ai-trigger-btn" id="ai-open-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+        AI
+      </button>
     </div>
 
-    <div class="dash-card" style="margin-bottom:1rem">
-      <div class="log-meta-grid">
-        <div class="form-group">
-          <label for="log-date">Date</label>
-          <input id="log-date" type="date" required />
-        </div>
-        <div class="form-group">
-          <label for="log-title">Title <span class="required">*</span></label>
-          <input id="log-title" type="text" placeholder="e.g. 5x5 — Workout A" required />
-        </div>
-        <div class="form-group">
-          <label for="log-duration">Duration (min)</label>
-          <input id="log-duration" type="number" min="1" placeholder="60" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="log-notes">Notes</label>
-        <textarea id="log-notes" rows="2" placeholder="How did it go?"></textarea>
-      </div>
+    <!-- Date quick-select: Yesterday / Today / Tomorrow -->
+    <div class="date-quick-row">
+      <button class="date-quick-btn" data-offset="-1">Yesterday</button>
+      <button class="date-quick-btn" data-offset="0">Today</button>
+      <button class="date-quick-btn" data-offset="1">Tomorrow</button>
     </div>
 
+    <!-- Natural language workout interpreter -->
+    <div class="nl-bar-wrap" id="nl-bar-wrap">
+      <div class="nl-bar-label">Describe your workout</div>
+      <div class="nl-bar-row">
+        <input type="text" class="nl-input" id="nl-input"
+          placeholder="squat 3×5 at 225, front squat 5×5 ramp 10% each set"
+          autocomplete="off" spellcheck="false" />
+        <button type="button" class="nl-submit-btn" id="nl-submit-btn" aria-label="Interpret workout">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+      <div class="nl-preview" id="nl-preview" role="region" aria-live="polite"></div>
+    </div>
+
+    <!-- Exercises -->
     <div class="page-header" style="margin-bottom:.75rem">
       <h3 style="font-size:1.1rem;font-weight:700">Exercises</h3>
       <button class="btn btn-ghost" id="add-exercise-btn">+ Add Exercise</button>
@@ -58,36 +493,198 @@
 
     <p id="log-error" class="form-error hidden" style="margin-top:.5rem"></p>
 
-    <div style="display:flex;align-items:center;justify-content:flex-end;gap:1rem;margin-top:1.5rem;flex-wrap:wrap">
-      <label style="display:flex;align-items:center;gap:.4rem;font-size:.88rem;color:var(--text-muted);cursor:pointer">
-        <input type="checkbox" id="save-as-template-chk" style="width:auto;accent-color:var(--accent)" />
-        Save as template
-      </label>
-      <a href="/workouts" class="btn btn-ghost">Cancel</a>
+    <!-- Save bar -->
+    <div style="display:flex;flex-direction:column;align-items:flex-end;margin-top:1.5rem">
       <button class="btn btn-primary" id="save-log-btn">Save Workout</button>
+      <p class="log-save-status" id="log-save-status"></p>
     </div>
+
   </main>
+
+  <nav class="bottom-nav">
+    <a href="/log" class="bn-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span>Log</span>
+    </a>
+    <a href="/workouts" class="bn-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>History</span>
+    </a>
+    <a href="/templates" class="bn-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Templates</span>
+    </a>
+    <a href="/programs" class="bn-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <span>Programs</span>
+    </a>
+    <a href="/dashboard" class="bn-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </a>
+  </nav>
+
+  <!-- Custom calendar date picker -->
+  <div class="cal-popover" id="cal-popover" role="dialog" aria-modal="false"
+    aria-label="Date picker" aria-hidden="true">
+    <div class="cal-header">
+      <button class="cal-nav-btn" id="cal-prev" type="button" aria-label="Previous month">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <span class="cal-month-label" id="cal-month-label" aria-live="polite"></span>
+      <button class="cal-nav-btn" id="cal-next" type="button" aria-label="Next month">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+    <div class="cal-day-names" aria-hidden="true">
+      <span>Su</span><span>Mo</span><span>Tu</span>
+      <span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <!-- AI slide-up sheet -->
+  <div class="sheet-overlay hidden" id="ai-sheet-overlay">
+    <div class="sheet" style="max-height:85vh;overflow-y:auto;padding-bottom:calc(1.5rem + env(safe-area-inset-bottom))">
+      <div class="sheet-drag"></div>
+      <div class="sheet-title">AI Workout Builder</div>
+      <textarea id="ai-prompt" class="ai-sheet-prompt" rows="3"
+        placeholder="Describe what you want — e.g. "Heavy leg day" or "Upper body, 45 min, no bench press""
+      ></textarea>
+      <button class="btn btn-primary" id="ai-suggest-btn" style="width:100%">Suggest Workout</button>
+      <div id="ai-result-area" style="display:none;margin-top:1rem"></div>
+    </div>
+  </div>
 
   <script src="/static/js/main.js"></script>
   <script>
-    if (!localStorage.getItem("token")) window.location.href = "/login";
-    document.getElementById("nav-username").textContent = localStorage.getItem("username") || "";
-    document.getElementById("logout-btn").addEventListener("click", () => {
-      localStorage.clear(); window.location.href = "/login";
+    document.getElementById("nav-username").textContent = "{{ username }}";
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await api("/api/users/logout", "POST");
+      window.location.href = "/login";
     });
 
-    // Exercise library is loaded from the API via attachLibraryAutocomplete (main.js)
-
-    // Pre-fill date from query param or today
-    const params = new URLSearchParams(location.search);
+    // ── Date setup ────────────────────────────────────────────────
+    const params   = new URLSearchParams(location.search);
     const dateParam = params.get("date");
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr  = new Date().toISOString().slice(0, 10);
     document.getElementById("log-date").value = dateParam || todayStr;
 
-    // State
-    let exercises = [];       // [{uid, exercise_library_id, name, notes, sets:[{set_type,reps,weight_lb,percent}]}]
-    let trainingMaxMap = {};  // exercise_library_id -> weight
-    let acTargetUid = null;
+    function isPlanMode() {
+      const dateVal = document.getElementById("log-date").value;
+      return params.get("mode") === "plan" || dateVal > todayStr;
+    }
+
+    function updateDateQuickButtons() {
+      const dateVal = document.getElementById("log-date").value;
+      document.querySelectorAll(".date-quick-btn").forEach(btn => {
+        const d = new Date();
+        d.setDate(d.getDate() + parseInt(btn.dataset.offset));
+        btn.classList.toggle("active", d.toISOString().slice(0, 10) === dateVal);
+      });
+    }
+
+    function updateModeUI() {
+      const plan    = isPlanMode();
+      const dateVal = document.getElementById("log-date").value;
+      const saveBtn  = document.getElementById("save-log-btn");
+      const statusEl = document.getElementById("log-save-status");
+
+      saveBtn.textContent = plan ? "Schedule Workout" : "Save Workout";
+      updateDateQuickButtons();
+
+      if (statusEl) {
+        if (plan) {
+          const d = new Date(dateVal + "T12:00:00");
+          const label = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+          statusEl.textContent = `Scheduling for ${label}`;
+          statusEl.className = "log-save-status planning";
+        } else if (dateVal < todayStr) {
+          statusEl.textContent = "Logging past workout";
+          statusEl.className = "log-save-status past";
+        } else {
+          statusEl.textContent = "";
+          statusEl.className = "log-save-status";
+        }
+      }
+    }
+
+    // Sync the visible chip label whenever the hidden date input changes
+    function syncDateChipLabel() {
+      const val   = document.getElementById("log-date").value;
+      const label = document.getElementById("date-chip-label");
+      if (!val || !label) return;
+      const d    = new Date(val + "T12:00:00");
+      const curY = new Date().getFullYear();
+      label.textContent = d.getFullYear() !== curY
+        ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+
+    // Quick-select pills — set date, sync chip, update title + mode
+    document.querySelectorAll(".date-quick-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const d = new Date();
+        d.setDate(d.getDate() + parseInt(btn.dataset.offset));
+        document.getElementById("log-date").value = d.toISOString().slice(0, 10);
+        syncDateChipLabel();
+        if (_titleIsAuto && !_titleHasAi) {
+          document.getElementById("log-title").value = defaultTitle();
+        }
+        updateModeUI();
+      });
+    });
+
+    // ── Title auto-generation ─────────────────────────────────────
+    let _titleIsAuto = true;  // user hasn't manually typed a title
+    let _titleHasAi  = false; // AI has already set a title (don't overwrite on date change)
+    let _aiTitleTimer = null;
+
+    function defaultTitle() {
+      const dateVal = document.getElementById("log-date").value;
+      const d = dateVal ? new Date(dateVal + "T12:00:00") : new Date();
+      return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    }
+
+    document.getElementById("log-title").addEventListener("input", () => {
+      _titleIsAuto = false;
+    });
+
+    async function refreshAiTitle() {
+      if (!_titleIsAuto) return;
+      const names = exercises.filter(e => e.name.trim()).map(e => e.name.trim());
+      if (!names.length) return;
+      const dateVal = document.getElementById("log-date").value;
+      const weekday = dateVal
+        ? new Date(dateVal + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" })
+        : new Date().toLocaleDateString("en-US", { weekday: "long" });
+      try {
+        const { title } = await api("/api/ai/title", "POST", { exercises: names, weekday });
+        if (title && _titleIsAuto) {
+          const inp = document.getElementById("log-title");
+          inp.value = title;
+          _titleHasAi = true;
+          inp.classList.add("ai-updated");
+          inp.addEventListener("animationend", () => inp.classList.remove("ai-updated"), { once: true });
+        }
+      } catch (_) {}
+    }
+
+    function scheduleAiTitle() {
+      clearTimeout(_aiTitleTimer);
+      _aiTitleTimer = setTimeout(refreshAiTitle, 900);
+    }
+
+    // ── State ─────────────────────────────────────────────────────
+    let exercises     = [];
+    let trainingMaxMap = {};
+    let acTargetUid   = null;
 
     async function loadMaxes() {
       const maxes = await api("/api/training-maxes/");
@@ -95,18 +692,13 @@
       maxes.forEach(m => { trainingMaxMap[m.exercise_id] = m.training_max_weight; });
     }
 
+    // No default sets — the user defines their structure
     function newExercise() {
       return {
         uid: Date.now() + Math.random(),
         exercise_library_id: null,
         name: "", notes: "",
-        sets: [
-          {set_type:"working",reps:5,weight_lb:null,percent:null},
-          {set_type:"working",reps:5,weight_lb:null,percent:null},
-          {set_type:"working",reps:5,weight_lb:null,percent:null},
-          {set_type:"working",reps:5,weight_lb:null,percent:null},
-          {set_type:"working",reps:5,weight_lb:null,percent:null},
-        ],
+        sets: [],
       };
     }
 
@@ -116,98 +708,250 @@
       exercises.forEach(ex => attachExCardListeners(ex.uid));
     }
 
-    const SET_TYPES = ["working", "warmup", "amrap", "emom", "failure"];
+    const TYPE_CYCLE = ["working", "warmup", "amrap", "emom", "failure"];
+    const TYPE_SHORT  = { working: "work", warmup: "wu", amrap: "amrap", emom: "emom", failure: "fail" };
+
+    // ── Weight/percent list parser ────────────────────────────────
+    // Parses "65% 70% 75%", "225 245 265", "65% and 70%", "225lb 245lb"
+    function parseWeightList(str, maxW) {
+      const parts = str
+        .replace(/\band\b/gi, " ")
+        .replace(/[@,]/g, " ")
+        .split(/\s+/)
+        .map(p => p.trim())
+        .filter(p => p && !/^(at|with|then|of)$/i.test(p));
+
+      const results = [];
+      for (const part of parts) {
+        const pctM = part.match(/^([\d.]+)%$/);
+        const lbM  = part.match(/^([\d.]+)(lbs?|kg)?$/i);
+        if (pctM) {
+          const pct = parseFloat(pctM[1]);
+          if (isNaN(pct) || pct <= 0 || pct > 200) continue;
+          const weight_lb = maxW ? Math.round(maxW * pct / 100 / 2.5) * 2.5 : null;
+          results.push({ weight_lb, percent: pct });
+        } else if (lbM) {
+          const val  = parseFloat(lbM[1]);
+          if (isNaN(val)) continue;
+          const unit = (lbM[2] || "").toLowerCase();
+          const weight_lb = unit === "kg"
+            ? Math.round(val * 2.20462 / 2.5) * 2.5
+            : (typeof fromInputWeight === "function" ? fromInputWeight(String(val)) : val);
+          results.push({ weight_lb, percent: null });
+        }
+      }
+      return results;
+    }
+
+    // ── Quick-set shorthand parser ────────────────────────────────
+    // Understands:
+    //   3×5  |  3x5  |  3 sets of 5  |  3 set of 5
+    //   3×5@225  |  3×5 at 75%
+    //   3 sets of 5 at 65% 70% 75%   ← different weight per set
+    //   65% 70% 75%                  ← weight-only list
+    //   5                            ← 5 empty sets
+    function parseQuickSets(str, maxW) {
+      const raw = str.trim();
+      if (!raw) return null;
+      const s = raw.toLowerCase().trim();
+
+      // ── NxM or "N sets of M" ─────────────────────────────────────
+      const m = /^(\d+)\s*[x×]\s*(\d+)/i.exec(s)
+             || /^(\d+)\s+sets?\s+of\s+(\d+)/i.exec(s);
+      if (m) {
+        const count = Math.min(20, parseInt(m[1]));
+        const reps  = parseInt(m[2]);
+        // Strip the matched part, then strip leading separator chars
+        const rest  = s.slice(m[0].length).replace(/^\s*[@,\s]*(?:at|@)?\s*/i, "").trim();
+
+        if (!rest) {
+          return Array.from({ length: count }, () => ({
+            set_type: "working", reps, weight_lb: null, percent: null,
+          }));
+        }
+
+        const weights = parseWeightList(rest, maxW);
+        if (weights.length > 0) {
+          // If fewer weights than sets, the last weight repeats
+          return Array.from({ length: count }, (_, i) => {
+            const w = weights[Math.min(i, weights.length - 1)];
+            return { set_type: "working", reps, weight_lb: w.weight_lb, percent: w.percent };
+          });
+        }
+
+        // Unparseable suffix — create sets with reps, no weight
+        return Array.from({ length: count }, () => ({
+          set_type: "working", reps, weight_lb: null, percent: null,
+        }));
+      }
+
+      // ── "N sets" (no reps) ────────────────────────────────────────
+      const nSets = /^(\d+)\s+sets?$/i.exec(s);
+      if (nSets) {
+        const n = Math.min(20, parseInt(nSets[1]));
+        return Array.from({ length: n }, () => ({
+          set_type: "working", reps: null, weight_lb: null, percent: null,
+        }));
+      }
+
+      // ── Small bare number → empty sets ("5" = 5 sets) ────────────
+      const bare = /^(\d+)$/.exec(s);
+      if (bare && parseInt(bare[1]) <= 20) {
+        const n = parseInt(bare[1]);
+        return Array.from({ length: n }, () => ({
+          set_type: "working", reps: null, weight_lb: null, percent: null,
+        }));
+      }
+
+      // ── Weight/percent list → one set per value ───────────────────
+      // "65% 70% 75%"  |  "225 245 265"  |  "225" (large number = weight)
+      const weights = parseWeightList(s, maxW);
+      if (weights.length > 0) {
+        return weights.map(w => ({ set_type: "working", reps: null, ...w }));
+      }
+
+      return null;
+    }
+
+    // ── Set row — % column only when TM exists ───────────────────
+    function _setRow(uid, s, i, maxW) {
+      const pct = s.percent || ((maxW && s.weight_lb) ? Math.round(s.weight_lb / maxW * 100) : "");
+      const pctCell = maxW
+        ? `<input type="number" class="set-pct" value="${pct}" min="1" max="200" step="5" placeholder="%" />`
+        : "";
+      const rowClass = maxW ? "set-row has-tm" : "set-row no-tm";
+
+      return `
+        <div class="${rowClass}" data-uid="${uid}" data-idx="${i}">
+          <span class="set-num">${i + 1}</span>
+          <button type="button" class="set-type-badge badge-${s.set_type} cycle-type-btn">${TYPE_SHORT[s.set_type] || s.set_type}</button>
+          <input type="number" class="set-reps" value="${s.reps || ""}" min="1" placeholder="reps" />
+          <input type="number" class="set-lb" value="${s.weight_lb != null ? toDisplayWeight(s.weight_lb) : ""}" min="0" step="${weightInputStep()}" placeholder="${unitLabel()}" />
+          ${pctCell}
+          <button type="button" class="btn-icon remove-set-btn">&times;</button>
+        </div>`;
+    }
 
     function renderExCard(ex) {
-      const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
-      const maxBadge = maxW ? `<span class="max-badge">TM: ${displayWeight(maxW)}</span>` : "";
-      const setsHtml = ex.sets.map((s, i) => {
-        const pct = (maxW && s.weight_lb) ? Math.round(s.weight_lb / maxW * 100) : (s.percent || "");
-        const typeOpts = SET_TYPES.map(t =>
-          `<option value="${t}"${s.set_type===t?" selected":""}>${t}</option>`).join("");
-        return `
-          <div class="set-row" data-uid="${ex.uid}" data-idx="${i}">
-            <span class="set-num">${i+1}</span>
-            <select class="set-type-sel" style="font-size:.75rem;padding:.25rem .3rem">${typeOpts}</select>
-            <input type="number" class="set-reps" value="${s.reps||""}" min="1" placeholder="reps" />
-            <input type="number" class="set-lb" value="${s.weight_lb != null ? toDisplayWeight(s.weight_lb) : ""}" min="0" step="${weightInputStep()}" placeholder="${unitLabel()}" />
-            <div class="pct-input-wrapper${!maxW ? " disabled" : ""}">
-              <input type="number" class="set-pct" value="${pct}" min="1" max="200" step="5" placeholder="${maxW ? "e.g. 75" : "—"}" ${!maxW ? 'disabled title="Set a training max first"' : ""} />
-            </div>
-            <button type="button" class="btn-icon remove-set-btn">&times;</button>
-          </div>`;
-      }).join("");
+      const maxW     = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
+      const setsHtml = ex.sets.map((s, i) => _setRow(ex.uid, s, i, maxW)).join("");
+      const tmBadge  = maxW
+        ? `<div class="exercise-max-row" style="margin-top:.3rem"><span class="max-badge">TM: ${displayWeight(maxW)}</span></div>`
+        : "";
+
+      // Quick-set entry — always visible; appends to existing sets
+      const hasSets    = ex.sets.length > 0;
+      const countBadge = hasSets
+        ? `<div class="sets-count-row"><span class="sets-count-label" id="sets-count-${ex.uid}">${ex.sets.length} set${ex.sets.length !== 1 ? "s" : ""}</span><button type="button" class="sets-reset-btn" data-uid="${ex.uid}">clear</button></div>`
+        : "";
+      const setEntryHtml = `
+        <div class="quick-set-wrap" id="quick-set-wrap-${ex.uid}">
+          ${countBadge}
+          <input type="text" class="quick-set-input" id="quick-sets-${ex.uid}"
+            placeholder="${hasSets ? "Add more… (e.g. 1×3@85%)" : "e.g. 3×5  ·  3×5@225  ·  3 sets of 5 at 65% 70% 75%"}"
+            autocomplete="off" />
+        </div>`;
 
       return `
         <div class="log-exercise-card" id="excard-${ex.uid}">
           <div class="log-exercise-header">
             <div style="flex:1;min-width:0">
               <div class="autocomplete-wrapper">
-                <input type="text" class="ex-name-input" data-uid="${ex.uid}" value="${escapeHtml(ex.name)}" placeholder="Search exercise…" autocomplete="off" />
+                <input type="text" class="ex-name-input" data-uid="${ex.uid}"
+                  value="${escapeHtml(ex.name)}" placeholder="Search exercise…" autocomplete="off" />
                 <ul class="autocomplete-list hidden" id="ac-${ex.uid}"></ul>
               </div>
-              ${maxBadge ? `<div class="exercise-max-row" style="margin-top:.3rem">${maxBadge}${maxW ? `<span class="pct-quick-btns">${[65,70,75,80,85,90,95].map(p=>`<button type="button" class="pct-quick-btn" data-uid="${ex.uid}" data-pct="${p}">${p}%</button>`).join("")}</span>` : ""}</div>` : ""}
+              ${tmBadge}
             </div>
-            <button type="button" class="btn-icon remove-ex-btn" data-uid="${ex.uid}" title="Remove exercise" style="margin-left:.5rem;font-size:1.2rem">&times;</button>
+            <button type="button" class="btn-icon remove-ex-btn" data-uid="${ex.uid}"
+              title="Remove exercise" style="margin-left:.5rem;font-size:1.2rem">&times;</button>
           </div>
-          <div class="sets-col-headers" style="margin-top:.5rem">
-            <span>#</span><span>Type</span><span>Reps</span><span>Weight (lbs)</span><span>% of TM</span><span></span>
-          </div>
-          <div class="ex-sets-container" id="sets-${ex.uid}">${setsHtml}</div>
+          ${setEntryHtml}
+          <div class="ex-sets-container" id="sets-${ex.uid}" style="margin-top:.35rem">${setsHtml}</div>
           <div style="margin-top:.4rem">
             <button type="button" class="btn btn-ghost btn-sm add-set-btn" data-uid="${ex.uid}">+ Add Set</button>
-          </div>
-          <div class="form-group" style="margin-top:.75rem;margin-bottom:0">
-            <input type="text" class="ex-notes-input" data-uid="${ex.uid}" value="${escapeHtml(ex.notes||"")}" placeholder="Notes (optional)" />
           </div>
         </div>`;
     }
 
     function attachExCardListeners(uid) {
-      const ex = exercises.find(e => e.uid === uid);
+      const ex   = exercises.find(e => e.uid === uid);
       if (!ex) return;
-
       const card = document.getElementById(`excard-${uid}`);
+
       card.querySelector(".remove-ex-btn").addEventListener("click", () => {
         exercises = exercises.filter(e => e.uid !== uid);
         renderBuilder();
       });
 
-      // Name + autocomplete using library API
       const nameInput = card.querySelector(".ex-name-input");
-      const acList = document.getElementById(`ac-${uid}`);
+      const acList    = document.getElementById(`ac-${uid}`);
       attachLibraryAutocomplete(nameInput, acList, item => {
         ex.name = item.name;
         ex.exercise_library_id = item.id;
         updateMaxBadge(uid);
+        scheduleAiTitle();
+        // After selecting exercise, focus quick-set if no sets yet
+        if (!ex.sets.length) {
+          const qs = document.getElementById(`quick-sets-${uid}`);
+          if (qs) setTimeout(() => qs.focus(), 50);
+        }
       });
       nameInput.addEventListener("input", () => { ex.name = nameInput.value; });
+      nameInput.addEventListener("blur",  () => { if (ex.name.trim()) scheduleAiTitle(); });
 
-      // Notes
-      card.querySelector(".ex-notes-input").addEventListener("input", e => { ex.notes = e.target.value; });
-
-      // Quick-percent buttons: apply chosen % to ALL sets at once
-      card.querySelectorAll(".pct-quick-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const pct = parseInt(btn.dataset.pct);
-          const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
-          if (!maxW) return;
-          ex.sets.forEach(s => {
-            s.percent = pct;
-            s.weight_lb = Math.round(maxW * pct / 100 / 2.5) * 2.5;
-          });
-          reRenderSets(uid);
+      // Quick-set input — appends to existing sets on each submission
+      const qsInput = document.getElementById(`quick-sets-${uid}`);
+      if (qsInput) {
+        const submitQuickSets = (refocus) => {
+          const val = qsInput.value.trim();
+          if (!val) return;
+          const maxW   = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
+          const parsed = parseQuickSets(val, maxW);
+          if (parsed && parsed.length) {
+            ex.sets = [...ex.sets, ...parsed];   // append, not replace
+            scheduleAiTitle();
+            renderBuilder();
+            if (refocus) {
+              setTimeout(() => {
+                const qs = document.getElementById(`quick-sets-${uid}`);
+                if (qs) qs.focus();
+              }, 30);
+            }
+          } else {
+            qsInput.classList.add("error");
+            setTimeout(() => qsInput.classList.remove("error"), 1500);
+          }
+        };
+        // Enter: submit + re-focus so user can keep adding
+        qsInput.addEventListener("keydown", e => {
+          if (e.key === "Enter") { e.preventDefault(); submitQuickSets(true); }
         });
-      });
+        // Blur: submit but don't re-focus (user intentionally moved away)
+        qsInput.addEventListener("blur", () => submitQuickSets(false));
+      }
 
-      // Add set
+      // Clear all sets button
+      const resetBtn = card.querySelector(".sets-reset-btn");
+      if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
+          ex.sets = [];
+          renderBuilder();
+          setTimeout(() => {
+            const qs = document.getElementById(`quick-sets-${uid}`);
+            if (qs) qs.focus();
+          }, 50);
+        });
+      }
+
+      // Add single set
       card.querySelector(".add-set-btn").addEventListener("click", () => {
-        const last = ex.sets[ex.sets.length - 1];
+        const last = ex.sets.length ? ex.sets[ex.sets.length - 1] : null;
         ex.sets.push({
-          set_type: last ? last.set_type : "working",
-          reps: last ? last.reps : 5,
+          set_type:  last ? last.set_type  : "working",
+          reps:      last ? last.reps      : null,
           weight_lb: last ? last.weight_lb : null,
-          percent: null,
+          percent:   last ? last.percent   : null,
         });
         reRenderSets(uid);
       });
@@ -216,37 +960,49 @@
     }
 
     function attachSetListeners(uid) {
-      const ex = exercises.find(e => e.uid === uid);
+      const ex        = exercises.find(e => e.uid === uid);
       const container = document.getElementById(`sets-${uid}`);
+      if (!container) return;
       const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
 
-      container.querySelectorAll(".set-type-sel").forEach((sel, i) => {
-        sel.addEventListener("change", () => { ex.sets[i].set_type = sel.value; });
+      container.querySelectorAll(".cycle-type-btn").forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+          const cur = TYPE_CYCLE.indexOf(ex.sets[i].set_type);
+          ex.sets[i].set_type = TYPE_CYCLE[(cur + 1) % TYPE_CYCLE.length];
+          reRenderSets(uid);
+        });
       });
+
       container.querySelectorAll(".set-reps").forEach((inp, i) => {
         inp.addEventListener("input", () => { ex.sets[i].reps = parseInt(inp.value) || null; });
       });
+
       container.querySelectorAll(".set-lb").forEach((inp, i) => {
         inp.addEventListener("input", () => {
           ex.sets[i].weight_lb = fromInputWeight(inp.value);
           if (maxW && ex.sets[i].weight_lb) {
-            container.querySelectorAll(".set-pct")[i].value = Math.round(ex.sets[i].weight_lb / maxW * 100);
-          } else {
-            container.querySelectorAll(".set-pct")[i].value = "";
+            const pctEl = container.querySelectorAll(".set-pct")[i];
+            if (pctEl) pctEl.value = Math.round(ex.sets[i].weight_lb / maxW * 100);
           }
         });
       });
-      container.querySelectorAll(".set-pct").forEach((inp, i) => {
-        inp.addEventListener("input", () => {
-          const pct = parseFloat(inp.value);
-          if (maxW && pct) {
-            const lb = Math.round(maxW * pct / 100 / 2.5) * 2.5;
-            ex.sets[i].weight_lb = lb;
-            container.querySelectorAll(".set-lb")[i].value = toDisplayWeight(lb);
-          }
-          ex.sets[i].percent = pct || null;
+
+      // % inputs only exist when maxW is set
+      if (maxW) {
+        container.querySelectorAll(".set-pct").forEach((inp, i) => {
+          inp.addEventListener("input", () => {
+            const pct = parseFloat(inp.value);
+            ex.sets[i].percent = pct || null;
+            if (pct) {
+              const lb = Math.round(maxW * pct / 100 / 2.5) * 2.5;
+              ex.sets[i].weight_lb = lb;
+              const lbEls = container.querySelectorAll(".set-lb");
+              if (lbEls[i]) lbEls[i].value = toDisplayWeight(lb);
+            }
+          });
         });
-      });
+      }
+
       container.querySelectorAll(".remove-set-btn").forEach((btn, i) => {
         btn.addEventListener("click", () => {
           ex.sets.splice(i, 1);
@@ -256,30 +1012,22 @@
     }
 
     function reRenderSets(uid) {
-      const ex = exercises.find(e => e.uid === uid);
-      const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
+      const ex        = exercises.find(e => e.uid === uid);
+      const maxW      = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
       const container = document.getElementById(`sets-${uid}`);
-      container.innerHTML = ex.sets.map((s, i) => {
-        const pct = (maxW && s.weight_lb) ? Math.round(s.weight_lb / maxW * 100) : (s.percent || "");
-        const typeOpts = SET_TYPES.map(t =>
-          `<option value="${t}"${s.set_type===t?" selected":""}>${t}</option>`).join("");
-        return `
-          <div class="set-row" data-uid="${uid}" data-idx="${i}">
-            <span class="set-num">${i+1}</span>
-            <select class="set-type-sel" style="font-size:.75rem;padding:.25rem .3rem">${typeOpts}</select>
-            <input type="number" class="set-reps" value="${s.reps||""}" min="1" placeholder="reps" />
-            <input type="number" class="set-lb" value="${s.weight_lb != null ? toDisplayWeight(s.weight_lb) : ""}" min="0" step="${weightInputStep()}" placeholder="${unitLabel()}" />
-            <div class="pct-input-wrapper${!maxW ? " disabled" : ""}">
-              <input type="number" class="set-pct" value="${pct}" min="1" max="200" step="5" placeholder="${maxW ? "e.g. 75" : "—"}" ${!maxW ? 'disabled' : ""} />
-            </div>
-            <button type="button" class="btn-icon remove-set-btn">&times;</button>
-          </div>`;
-      }).join("");
+      if (!container) return;
+      container.innerHTML = ex.sets.map((s, i) => _setRow(uid, s, i, maxW)).join("");
       attachSetListeners(uid);
+
+      // Sync count badge and input placeholder
+      const countEl = document.getElementById(`sets-count-${uid}`);
+      if (countEl) countEl.textContent = `${ex.sets.length} set${ex.sets.length !== 1 ? "s" : ""}`;
+      const qsEl = document.getElementById(`quick-sets-${uid}`);
+      if (qsEl) qsEl.placeholder = ex.sets.length > 0 ? "Add more… (e.g. 1×3@85%)" : "e.g. 3×5  ·  3×5@225  ·  3 sets of 5 at 65% 70% 75%";
     }
 
     function updateMaxBadge(uid) {
-      const ex = exercises.find(e => e.uid === uid);
+      const ex   = exercises.find(e => e.uid === uid);
       if (!ex) return;
       const maxW = ex.exercise_library_id ? trainingMaxMap[ex.exercise_library_id] : null;
       const card = document.getElementById(`excard-${uid}`);
@@ -291,16 +1039,7 @@
           badgeRow.style.marginTop = ".3rem";
           card.querySelector(".autocomplete-wrapper").after(badgeRow);
         }
-        badgeRow.innerHTML = `<span class="max-badge">TM: ${displayWeight(maxW)}</span><span class="pct-quick-btns">${[65,70,75,80,85,90,95].map(p=>`<button type="button" class="pct-quick-btn" data-uid="${uid}" data-pct="${p}">${p}%</button>`).join("")}</span>`;
-        badgeRow.querySelectorAll(".pct-quick-btn").forEach(btn => {
-          btn.addEventListener("click", () => {
-            const pct = parseInt(btn.dataset.pct);
-            const mx = trainingMaxMap[ex.exercise_library_id];
-            if (!mx) return;
-            ex.sets.forEach(s => { s.percent = pct; s.weight_lb = Math.round(mx * pct / 100 / 2.5) * 2.5; });
-            reRenderSets(uid);
-          });
-        });
+        badgeRow.innerHTML = `<span class="max-badge">TM: ${displayWeight(maxW)}</span>`;
       } else if (badgeRow) {
         badgeRow.remove();
       }
@@ -310,56 +1049,620 @@
     document.getElementById("add-exercise-btn").addEventListener("click", () => {
       exercises.push(newExercise());
       renderBuilder();
+      // Focus the name input of the newly added exercise
+      const lastEx  = exercises[exercises.length - 1];
+      setTimeout(() => {
+        const inp = document.querySelector(`#excard-${lastEx.uid} .ex-name-input`);
+        if (inp) inp.focus();
+      }, 50);
     });
 
+    // ── Save handler ──────────────────────────────────────────────
     document.getElementById("save-log-btn").addEventListener("click", async () => {
       const errorEl = document.getElementById("log-error");
-      const title = document.getElementById("log-title").value.trim();
+      const title   = document.getElementById("log-title").value.trim();
       const dateVal = document.getElementById("log-date").value;
-      if (!title) { errorEl.textContent = "Title is required."; errorEl.classList.remove("hidden"); return; }
+      if (!title) {
+        errorEl.textContent = "Workout name is required.";
+        errorEl.classList.remove("hidden");
+        document.getElementById("log-title").focus();
+        return;
+      }
       errorEl.classList.add("hidden");
 
       try {
         const workout = await api("/api/workouts/", "POST", {
           title,
-          date: dateVal + "T12:00:00",
-          duration_minutes: Number(document.getElementById("log-duration").value) || null,
+          date:  dateVal + "T12:00:00",
           notes: document.getElementById("log-notes").value || null,
+          status: isPlanMode() ? "planned" : "completed",
         });
 
+        const plan = isPlanMode();
         for (const ex of exercises) {
           if (!ex.name.trim()) continue;
-          const sets = ex.sets.filter(s => s.reps || s.weight_lb).map((s, i) => ({
-            set_number: i + 1,
-            set_type: s.set_type || "working",
-            reps: s.reps,
-            weight_lb: s.weight_lb,
-            percent: s.percent || null,
-          }));
+          const sets = ex.sets
+            .filter(s => s.reps || s.weight_lb || s.percent)
+            .map((s, i) => ({
+              set_number: i + 1,
+              set_type:   s.set_type || "working",
+              ...(plan ? {
+                planned_reps:      s.reps,
+                planned_weight_lb: s.weight_lb,
+                planned_percent:   s.percent || null,
+              } : {
+                reps:      s.reps,
+                weight_lb: s.weight_lb,
+                percent:   s.percent || null,
+                completed: true,
+              }),
+            }));
           if (!sets.length) continue;
           await api(`/api/workouts/${workout.id}/exercises`, "POST", {
-            name: ex.name,
+            name:                ex.name,
             exercise_library_id: ex.exercise_library_id || null,
-            notes: ex.notes || null,
+            notes:               ex.notes || null,
             sets,
           });
         }
 
-        if (document.getElementById("save-as-template-chk").checked) {
-          await api(`/api/workouts/${workout.id}/save-as-template`, "POST", { name: title });
+        const currentDate = document.getElementById("log-date").value;
+        const isFuture    = isPlanMode();
+
+        if (isFuture) {
+          // Planning flow: stay on page, offer to plan the next day
+          const saveBtn  = document.getElementById("save-log-btn");
+          const statusEl = document.getElementById("log-save-status");
+
+          saveBtn.textContent = "Scheduled ✓";
+          saveBtn.disabled    = true;
+
+          const nextD = new Date(currentDate + "T12:00:00");
+          nextD.setDate(nextD.getDate() + 1);
+          const nextDateStr = nextD.toISOString().slice(0, 10);
+          const nextLabel   = nextD.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+
+          statusEl.innerHTML  = `Scheduled! <button class="link-btn" id="plan-next-btn">Plan ${nextLabel} &rarr;</button> &nbsp;&middot;&nbsp; <a href="/workouts" class="link-btn">Done</a>`;
+          statusEl.className  = "log-save-status";
+
+          document.getElementById("plan-next-btn").addEventListener("click", () => {
+            exercises = [newExercise()];
+            document.getElementById("log-date").value  = nextDateStr;
+            document.getElementById("log-notes").value = "";
+            _titleIsAuto = true;
+            _titleHasAi  = false;
+            document.getElementById("log-title").value = defaultTitle();
+            document.getElementById("log-title").style.animation = "";
+            saveBtn.textContent = "Schedule Workout";
+            saveBtn.disabled    = false;
+            statusEl.innerHTML  = "";
+            statusEl.className  = "log-save-status";
+            document.getElementById("log-error").classList.add("hidden");
+            syncDateChipLabel();
+            updateModeUI();
+            renderBuilder();
+            setTimeout(() => {
+              const inp = document.querySelector(`#excard-${exercises[0].uid} .ex-name-input`);
+              if (inp) inp.focus();
+            }, 50);
+          });
+        } else {
+          window.location.href = "/workouts";
         }
-        window.location.href = "/workouts";
       } catch (err) {
         errorEl.textContent = err.message;
         errorEl.classList.remove("hidden");
       }
     });
 
+    // ── Natural language workout interpreter ──────────────────────
+    ;(function initNlInterpreter() {
+      const nlInput   = document.getElementById("nl-input");
+      const nlBtn     = document.getElementById("nl-submit-btn");
+      const nlPreview = document.getElementById("nl-preview");
+
+      let _nlResult = null;
+
+      async function runInterpret() {
+        const text = nlInput.value.trim();
+        if (!text) return;
+
+        nlBtn.disabled    = true;
+        nlPreview.innerHTML = '<div class="nl-preview-inner" style="color:var(--text-muted);font-size:.78rem;padding:.4rem 0">Interpreting…</div>';
+
+        try {
+          _nlResult = await api("/api/ai/interpret", "POST", { text });
+          nlPreview.innerHTML = _nlRenderPreview(_nlResult);
+          _nlAttachListeners(_nlResult);
+        } catch (err) {
+          nlPreview.innerHTML = `<div class="nl-preview-inner" style="color:var(--danger);font-size:.78rem">${escapeHtml(err.message)}</div>`;
+        } finally {
+          nlBtn.disabled = false;
+        }
+      }
+
+      function _nlSummarizeSets(sets) {
+        if (!sets || !sets.length) return "—";
+        const reps    = [...new Set(sets.map(s => s.reps))];
+        const weights = [...new Set(sets.map(s => s.weight_lb).filter(Boolean))];
+        const n       = sets.length;
+
+        if (reps.length === 1 && weights.length <= 1) {
+          const r = reps[0]; const w = weights[0];
+          let str = `${n} × ${r != null ? r + " reps" : "?"}`;
+          if (w) str += ` @ ${displayWeight(w)}`;
+          return str;
+        }
+        // Variable weights — show range or individual
+        if (weights.length > 1) {
+          const minW = Math.min(...weights); const maxW = Math.max(...weights);
+          const r = reps.length === 1 ? reps[0] : "?";
+          return `${n} × ${r != null ? r + " reps" : "?"}, ${displayWeight(minW)}–${displayWeight(maxW)}`;
+        }
+        return sets.map(s => `${s.reps != null ? s.reps : "?"}r${s.weight_lb ? " @" + displayWeight(s.weight_lb) : ""}`).join(", ");
+      }
+
+      function _nlRenderPreview(result) {
+        if (!result.exercises || !result.exercises.length) {
+          return `<div class="nl-preview-inner" style="color:var(--text-muted);font-size:.78rem">Could not interpret — try rephrasing.</div>`;
+        }
+
+        const exRows = result.exercises.map(ex =>
+          `<div class="nl-preview-ex">
+            <span class="nl-preview-exname">${escapeHtml(ex.name)}</span>
+            <span class="nl-preview-exsets">${_nlSummarizeSets(ex.sets)}</span>
+           </div>`
+        ).join("");
+
+        const assumptions = (result.assumptions || []).filter(Boolean);
+        const assumHtml = assumptions.length
+          ? `<hr class="nl-preview-divider"/>
+             <div class="nl-preview-assumptions">
+               ${assumptions.map(a => `<div class="nl-preview-assumption">${escapeHtml(a)}</div>`).join("")}
+             </div>`
+          : "";
+
+        const confirmFlag = result.needs_confirmation
+          ? `<div class="nl-confirm-flag">⚠ Review carefully — some parts may need adjustment.</div>`
+          : "";
+
+        const confPct = Math.round((result.confidence || 0) * 100);
+
+        return `<div class="nl-preview-inner">
+          ${exRows}
+          ${assumHtml}
+          ${confirmFlag}
+          <div class="nl-preview-actions">
+            <button type="button" class="nl-load-btn" id="nl-load-btn">Load into builder</button>
+            <button type="button" class="nl-discard-btn" id="nl-discard-btn">Discard</button>
+            <span class="nl-conf-tag">${confPct}%</span>
+          </div>
+        </div>`;
+      }
+
+      function _nlAttachListeners(result) {
+        document.getElementById("nl-load-btn")?.addEventListener("click", () => {
+          if (!result.exercises || !result.exercises.length) return;
+
+          const newExercises = result.exercises.map(ex => ({
+            uid:                 Date.now() + Math.random(),
+            name:               ex.name,
+            exercise_library_id: ex.library_id || null,
+            notes:              ex.notes || "",
+            sets:               (ex.sets || []).map(s => ({
+              set_type:  s.set_type || "working",
+              reps:      s.reps,
+              weight_lb: s.weight_lb,
+              percent:   s.percent,
+            })),
+          }));
+
+          // Preserve any existing exercises that already have content
+          const withContent = exercises.filter(e => e.name.trim() || e.sets.length);
+          exercises = withContent.length
+            ? [...newExercises, ...withContent]
+            : newExercises;
+
+          renderBuilder();
+          scheduleAiTitle();
+
+          nlPreview.innerHTML = "";
+          nlInput.value = "";
+          _nlResult = null;
+
+          requestAnimationFrame(() => {
+            document.getElementById("exercise-builder")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        });
+
+        document.getElementById("nl-discard-btn")?.addEventListener("click", () => {
+          nlPreview.innerHTML = "";
+          nlInput.value = "";
+          _nlResult = null;
+        });
+      }
+
+      nlBtn.addEventListener("click", runInterpret);
+      nlInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); runInterpret(); }
+      });
+    })();
+
+    // ── Init ──────────────────────────────────────────────────────
     initUnitToggle(() => renderBuilder());
     loadMaxes().then(() => {
       exercises.push(newExercise());
       renderBuilder();
+      syncDateChipLabel();
+      // Default title to the selected date if user hasn't typed anything
+      if (!document.getElementById("log-title").value) {
+        document.getElementById("log-title").value = defaultTitle();
+      } else {
+        _titleIsAuto = false;
+      }
+      updateModeUI();
     });
+
+    // ── AI Workout Builder ────────────────────────────────────────
+    let _lastAiResult = null;
+    let _regenCount   = 0;
+    const _maxRegens  = {{ ui_max_regens }};
+
+    document.getElementById("ai-open-btn").addEventListener("click", () => {
+      document.getElementById("ai-sheet-overlay").classList.remove("hidden");
+      setTimeout(() => document.getElementById("ai-prompt").focus(), 80);
+    });
+    document.getElementById("ai-sheet-overlay").addEventListener("click", e => {
+      if (e.target === document.getElementById("ai-sheet-overlay"))
+        document.getElementById("ai-sheet-overlay").classList.add("hidden");
+    });
+    document.getElementById("ai-suggest-btn").addEventListener("click", () => suggestWorkout());
+
+    async function suggestWorkout() {
+      const btn      = document.getElementById("ai-suggest-btn");
+      const resultEl = document.getElementById("ai-result-area");
+      const prompt   = document.getElementById("ai-prompt").value.trim();
+      btn.disabled    = true;
+      btn.textContent = "Thinking…";
+      resultEl.style.display = "block";
+      resultEl.innerHTML = _skeletonHTML();
+      try {
+        const data = await api("/api/ai/suggest", "POST", { prompt });
+        _lastAiResult = data;
+        resultEl.innerHTML = _renderResult(data);
+        _attachResultListeners(data);
+      } catch (err) {
+        resultEl.innerHTML = `<p class="form-error" style="margin:0">${escapeHtml(err.message)}</p>`;
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = "Suggest Workout";
+      }
+    }
+
+    function _skeletonHTML() {
+      return `<div class="ai-result">
+        <div class="ai-skeleton">
+          <div class="ai-skel-line wide"></div>
+          <div class="ai-skel-line narrow"></div>
+          <div class="ai-skel-line medium" style="margin-top:.5rem"></div>
+          <div class="ai-skel-line wide"></div>
+          <div class="ai-skel-line medium"></div>
+        </div>
+      </div>`;
+    }
+
+    function _fmtBlock(block) {
+      const sets  = block.sets || 1;
+      const reps  = block.reps != null ? block.reps : "?";
+      let weight  = "";
+      if (block.percent)     weight = ` @${block.percent}%`;
+      else if (block.weight) weight = ` @${toDisplayWeight(block.weight)}${unitLabel()}`;
+      const type = (block.set_type && block.set_type !== "working") ? ` [${block.set_type}]` : "";
+      return `${sets}×${reps}${weight}${type}`;
+    }
+
+    function _renderResult(data) {
+      if (!data) return "";
+
+      if (data.mode === "answer") {
+        const ans = data.answer || {};
+        return `<div class="ai-result">
+          <div class="ai-answer-title">${escapeHtml(ans.title || "Answer")}</div>
+          <div class="ai-answer-body">${escapeHtml(ans.content || "")}</div>
+          ${data.summary ? `<p class="ai-summary" style="margin-top:.85rem">${escapeHtml(data.summary)}</p>` : ""}
+          ${ans.suggested_action === "generate_workout" ? `<div class="ai-sheet-primary-row" style="margin-top:.75rem">
+            <button class="btn btn-primary btn-sm" onclick="suggestWorkout()">Build a Workout Instead</button>
+          </div>` : ""}
+        </div>`;
+      }
+
+      const w           = data.workout || {};
+      const exercises_ai = (w.exercises || []);
+      const exRows = exercises_ai.map(ex => {
+        const blocks = (ex.blocks || []).map(b => `<span class="set-chip">${escapeHtml(_fmtBlock(b))}</span>`).join(" ");
+        const notes  = ex.notes ? `<span class="ai-ex-notes">${escapeHtml(ex.notes)}</span>` : "";
+        return `<div class="ai-exercise-row">
+          <span class="ai-ex-name">${escapeHtml(ex.exercise_name || "")}</span>
+          <span class="ai-ex-sets set-chips">${blocks}</span>
+          ${notes}
+        </div>`;
+      }).join("");
+
+      const noticed     = (data.ai_noticed || []).filter(Boolean);
+      const noticedHtml  = noticed.length ? `
+        <div class="ai-noticed" id="ai-noticed-body" style="display:none">
+          ${noticed.map(n => `<div class="ai-noticed-item">${escapeHtml(n)}</div>`).join("")}
+        </div>` : "";
+      const noticedToggle = noticed.length ? `
+        <button class="ai-noticed-toggle" id="ai-noticed-toggle">
+          ▸ AI noticed (${noticed.length})
+        </button>` : "";
+
+      const tmRecs = (data.training_max_recommendations || []).filter(r => r.recommended_tm);
+      const tmHtml = tmRecs.length ? tmRecs.map(r =>
+        `<div class="ai-tm-rec">
+          <strong>TM recommendation:</strong> ${escapeHtml(r.exercise_name)} — ${r.current_tm ?? "unset"} lb → ${r.recommended_tm} lb. ${escapeHtml(r.reason || "")}
+        </div>`
+      ).join("") : "";
+
+      return `<div class="ai-result">
+        <div class="ai-result-name">${escapeHtml(w.name || data.workout_name || "Suggested Workout")}</div>
+        ${data.workout_goal ? `<div class="ai-result-goal">${escapeHtml(data.workout_goal)}</div>` : ""}
+        <div class="ai-exercise-list">${exRows}</div>
+        ${tmHtml}
+        ${data.summary ? `<p class="ai-summary">${escapeHtml(data.summary)}</p>` : ""}
+        <div class="ai-sheet-primary-row">
+          <button class="btn btn-primary btn-sm" id="ai-use-btn" style="flex:1">Use This Workout</button>
+        </div>
+        <div class="ai-sheet-secondary-row">
+          <button class="btn btn-ghost btn-sm" id="ai-template-btn">Save Template</button>
+          <button class="btn btn-ghost btn-sm" id="ai-regen-btn"
+            ${_regenCount >= _maxRegens ? "disabled title=\"Session regeneration limit reached\"" : ""}>
+            Regenerate${_regenCount > 0 ? ` (${_maxRegens - _regenCount} left)` : ""}
+          </button>
+        </div>
+        ${noticedToggle}
+        ${noticedHtml}
+      </div>`;
+    }
+
+    function _attachResultListeners(data) {
+      const useBtn   = document.getElementById("ai-use-btn");
+      const tplBtn   = document.getElementById("ai-template-btn");
+      const regenBtn = document.getElementById("ai-regen-btn");
+      const toggle   = document.getElementById("ai-noticed-toggle");
+      if (useBtn)   useBtn.addEventListener("click", () => {
+        _loadIntoBuilder(data);
+        document.getElementById("ai-sheet-overlay").classList.add("hidden");
+      });
+      if (tplBtn)   tplBtn.addEventListener("click",   () => _saveTemplate(data));
+      if (regenBtn) regenBtn.addEventListener("click", () => {
+        if (_regenCount >= _maxRegens) return;
+        _regenCount++;
+        suggestWorkout();
+      });
+      if (toggle) toggle.addEventListener("click", () => {
+        const body = document.getElementById("ai-noticed-body");
+        const open = body.style.display !== "none";
+        body.style.display = open ? "none" : "block";
+        toggle.textContent = (open ? "▸" : "▾") + toggle.textContent.slice(1);
+      });
+    }
+
+    function _libWordMatch(exName, libName) {
+      const wa = new Set((exName  || "").toLowerCase().match(/\w+/g) || []);
+      const wb = new Set((libName || "").toLowerCase().match(/\w+/g) || []);
+      const shorter = wa.size <= wb.size ? wa : wb;
+      const longer  = wa.size <= wb.size ? wb : wa;
+      if (shorter.size < 2) return false;
+      return [...shorter].every(w => longer.has(w));
+    }
+
+    function _loadIntoBuilder(data) {
+      const w     = data.workout || {};
+      const aiExs = w.exercises || [];
+      if (!aiExs.length) return;
+
+      const titleEl = document.getElementById("log-title");
+      if (!titleEl.value.trim()) titleEl.value = w.name || data.workout_name || "";
+
+      exercises = [];
+      for (const aiEx of aiExs) {
+        const exNameLower = (aiEx.exercise_name || "").toLowerCase();
+        const libMatch = _libraryCache
+          ? _libraryCache.find(l => l.name.toLowerCase() === exNameLower)
+            || _libraryCache.find(l => _libWordMatch(aiEx.exercise_name, l.name))
+          : null;
+
+        const uid  = Date.now() + Math.random();
+        const maxW = libMatch ? trainingMaxMap[libMatch.id] : null;
+
+        const sets = [];
+        for (const block of (aiEx.blocks || [])) {
+          const count = Math.max(1, parseInt(block.sets) || 1);
+          for (let i = 0; i < count; i++) {
+            let weight_lb = block.weight || null;
+            const pct     = block.percent || null;
+            if (pct && maxW && !weight_lb) weight_lb = Math.round(maxW * pct / 100 / 2.5) * 2.5;
+            const reps = block.reps != null ? (isNaN(parseInt(block.reps)) ? null : parseInt(block.reps)) : null;
+            sets.push({ set_type: block.set_type || "working", reps, weight_lb, percent: pct });
+          }
+        }
+        // AI result with no sets: leave empty for quick-set entry
+
+        exercises.push({
+          uid,
+          name:                libMatch ? libMatch.name : (aiEx.exercise_name || ""),
+          exercise_library_id: libMatch ? libMatch.id : null,
+          notes:               aiEx.notes || "",
+          sets,
+        });
+      }
+
+      renderBuilder();
+      document.getElementById("exercise-builder").scrollIntoView({ behavior: "smooth" });
+    }
+
+    async function _saveTemplate(data) {
+      const btn = document.getElementById("ai-template-btn");
+      if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+      try {
+        await api("/api/ai/save-template", "POST", { ai_result: data });
+        if (btn) btn.textContent = "Saved ✓";
+        setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = "Save Template"; } }, 2000);
+      } catch (err) {
+        showToast("Save failed: " + err.message, "error");
+        if (btn) { btn.disabled = false; btn.textContent = "Save Template"; }
+      }
+    }
+
+    // ── Custom calendar ───────────────────────────────────────────
+    ;(function initCalendar() {
+      const popover   = document.getElementById("cal-popover");
+      const chipBtn   = document.getElementById("date-chip-btn");
+      const chipLabel = document.getElementById("date-chip-label");
+      const hiddenIn  = document.getElementById("log-date");
+      const monthLbl  = document.getElementById("cal-month-label");
+      const grid      = document.getElementById("cal-grid");
+      if (!popover || !chipBtn || !hiddenIn) return;
+
+      const _now    = new Date();
+      _now.setHours(0, 0, 0, 0);
+      const todayISO = _now.toISOString().slice(0, 10);
+
+      let calY = _now.getFullYear();
+      let calM = _now.getMonth();
+      let open = false;
+
+      const MONTHS = [
+        "JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE",
+        "JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"
+      ];
+
+      function pad(n) { return String(n).padStart(2, "0"); }
+      function isoOf(y, m, d) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
+
+      function renderGrid() {
+        monthLbl.textContent = `${MONTHS[calM]} ${calY}`;
+        const firstWd    = new Date(calY, calM, 1).getDay();
+        const daysInMon  = new Date(calY, calM + 1, 0).getDate();
+        const daysInPrev = new Date(calY, calM, 0).getDate();
+        const selected   = hiddenIn.value;
+        const cells      = [];
+
+        for (let i = firstWd - 1; i >= 0; i--)
+          cells.push({ d: daysInPrev - i, iso: isoOf(calY, calM - 1, daysInPrev - i), other: true });
+        for (let d = 1; d <= daysInMon; d++)
+          cells.push({ d, iso: isoOf(calY, calM, d), other: false });
+        while (cells.length < 42)
+          cells.push({ d: cells.length - firstWd - daysInMon + 1, iso: isoOf(calY, calM + 1, cells.length - firstWd - daysInMon + 1), other: true });
+
+        grid.innerHTML = cells.map(({ d, iso, other }) => {
+          const cls = [
+            "cal-day",
+            other               ? "other-month" : "",
+            iso === todayISO    ? "today"        : "",
+            iso === selected    ? "selected"     : "",
+          ].filter(Boolean).join(" ");
+          return `<button class="${cls}" data-date="${iso}" type="button"
+            aria-label="${iso}" aria-pressed="${iso === selected}">${d}</button>`;
+        }).join("");
+      }
+
+      function position() {
+        const r   = chipBtn.getBoundingClientRect();
+        const pw  = 272;
+        const spB = window.innerHeight - r.bottom;
+        const spT = r.top;
+
+        let left = r.left;
+        if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+        if (left < 8) left = 8;
+        popover.style.left = left + "px";
+
+        if (spB >= 300 || spB >= spT) {
+          popover.style.top    = (r.bottom + 6) + "px";
+          popover.style.bottom = "";
+        } else {
+          popover.style.top    = "";
+          popover.style.bottom = (window.innerHeight - r.top + 6) + "px";
+        }
+      }
+
+      function openCal() {
+        if (open) return;
+        open = true;
+        const val = hiddenIn.value;
+        if (val) {
+          const d = new Date(val + "T12:00:00");
+          calY = d.getFullYear();
+          calM = d.getMonth();
+        }
+        renderGrid();
+        position();
+        popover.classList.add("open");
+        popover.setAttribute("aria-hidden", "false");
+        chipBtn.setAttribute("aria-expanded", "true");
+        chipBtn.classList.add("active");
+      }
+
+      function closeCal() {
+        if (!open) return;
+        open = false;
+        popover.classList.remove("open");
+        popover.setAttribute("aria-hidden", "true");
+        chipBtn.setAttribute("aria-expanded", "false");
+        chipBtn.classList.remove("active");
+      }
+
+      function pickDate(iso) {
+        hiddenIn.value = iso;
+        if (typeof syncDateChipLabel === "function") syncDateChipLabel();
+        if (typeof _titleIsAuto !== "undefined" && _titleIsAuto && !_titleHasAi) {
+          const ti = document.getElementById("log-title");
+          if (ti && typeof defaultTitle === "function") ti.value = defaultTitle();
+        }
+        if (typeof updateModeUI === "function") updateModeUI();
+        renderGrid(); // refresh selected state before close so no flicker
+        closeCal();
+      }
+
+      // ── Events ───────────────────────────────────────────
+      chipBtn.addEventListener("click", () => open ? closeCal() : openCal());
+      chipBtn.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open ? closeCal() : openCal(); }
+      });
+
+      document.getElementById("cal-prev").addEventListener("click", () => {
+        if (--calM < 0) { calM = 11; calY--; }
+        renderGrid();
+      });
+      document.getElementById("cal-next").addEventListener("click", () => {
+        if (++calM > 11) { calM = 0; calY++; }
+        renderGrid();
+      });
+
+      grid.addEventListener("click", e => {
+        const btn = e.target.closest(".cal-day");
+        if (btn) pickDate(btn.dataset.date);
+      });
+
+      document.addEventListener("click", e => {
+        if (open && !popover.contains(e.target) && !chipBtn.contains(e.target)) closeCal();
+      });
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape" && open) closeCal();
+      });
+
+      // ── Initialize chip label from current hidden value ──
+      if (hiddenIn.value && chipLabel) {
+        const d    = new Date(hiddenIn.value + "T12:00:00");
+        const curY = new Date().getFullYear();
+        chipLabel.textContent = d.getFullYear() !== curY
+          ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      }
+    })();
   </script>
 </body>
 </html>

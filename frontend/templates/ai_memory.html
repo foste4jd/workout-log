@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Memory — WorkoutLog</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body class="app-page">
+
+  <nav class="navbar">
+    <span class="nav-logo">WorkoutLog</span>
+    <div class="nav-links">
+      <a href="/dashboard"  class="nav-link">Dashboard</a>
+      <a href="/workouts"   class="nav-link">Workouts</a>
+      <a href="/templates"  class="nav-link">Templates</a>
+      <a href="/maxes"      class="nav-link">Maxes</a>
+      <a href="/log"        class="nav-link">Log</a>
+    </div>
+    <div class="nav-right">
+      <span id="nav-username"></span>
+      <button class="btn btn-ghost unit-toggle" title="Switch weight units">lbs</button>
+      <button id="logout-btn" class="btn btn-ghost">Logout</button>
+    </div>
+  </nav>
+
+  <main class="container memory-page">
+    <div class="page-header" style="margin-bottom:1.5rem">
+      <div>
+        <h2>AI Memory</h2>
+        <p class="text-muted" style="margin-top:.3rem;font-size:.88rem">
+          Stored memories that inform workout generation and recommendations.
+        </p>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="load()">Refresh</button>
+    </div>
+
+    <div id="empty-state" class="hidden" style="text-align:center;padding:3rem 1rem;color:var(--text-muted)">
+      No memories stored yet. Use the AI Workout Builder on the
+      <a href="/log" style="color:var(--accent)">Log page</a> to get started.
+    </div>
+
+    <div id="memory-list"></div>
+  </main>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    document.getElementById("nav-username").textContent = "{{ username }}";
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await api("/api/users/logout", "POST");
+      window.location.href = "/login";
+    });
+    initUnitToggle(() => {});
+
+    const CAT_LABELS = {
+      schedule:            "Schedule",
+      recovery:            "Recovery",
+      injury:              "Injury",
+      preferences:         "Preferences",
+      performance_pattern: "Pattern",
+      other:               "Other",
+    };
+
+    async function load() {
+      const listEl  = document.getElementById("memory-list");
+      const emptyEl = document.getElementById("empty-state");
+      listEl.innerHTML = `<p class="text-muted" style="padding:.5rem 0">Loading…</p>`;
+
+      try {
+        const entries = await api("/api/ai/memory");
+        if (!entries.length) {
+          listEl.innerHTML = "";
+          emptyEl.classList.remove("hidden");
+          return;
+        }
+        emptyEl.classList.add("hidden");
+        listEl.innerHTML = `
+          <table class="memory-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Memory</th>
+                <th>Priority</th>
+                <th>Added</th>
+                <th>Active</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="memory-tbody">
+            </tbody>
+          </table>`;
+
+        const tbody = document.getElementById("memory-tbody");
+        entries.forEach(e => {
+          const row = document.createElement("tr");
+          row.id = `row-${e.id}`;
+          if (!e.is_active) row.classList.add("inactive");
+
+          const catClass = `memory-cat-${(e.category || "other").replace(/ /g, "_")}`;
+          const priClass  = `memory-priority-${e.priority || "medium"}`;
+          const date = e.created_at ? new Date(e.created_at).toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"}) : "—";
+
+          row.innerHTML = `
+            <td><span class="memory-cat-badge ${catClass}">${escapeHtml(CAT_LABELS[e.category] || e.category || "Other")}</span></td>
+            <td style="max-width:320px;line-height:1.5">${escapeHtml(e.text)}</td>
+            <td class="${priClass}">${escapeHtml(e.priority || "medium")}</td>
+            <td style="white-space:nowrap;font-size:.82rem;color:var(--text-muted)">${date}</td>
+            <td style="text-align:center">
+              <input type="checkbox" ${e.is_active ? "checked" : ""}
+                onchange="toggleActive(${e.id}, this.checked)"
+                style="width:auto;accent-color:var(--accent);cursor:pointer" />
+            </td>
+            <td>
+              <button class="btn-icon" title="Delete" onclick="deleteEntry(${e.id})"
+                style="color:var(--danger);font-size:1rem">✕</button>
+            </td>`;
+          tbody.appendChild(row);
+        });
+
+      } catch (err) {
+        listEl.innerHTML = `<p class="form-error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    async function deleteEntry(id) {
+      if (!confirm("Delete this memory?")) return;
+      try {
+        await api(`/api/ai/memory/${id}`, "DELETE");
+        const row = document.getElementById(`row-${id}`);
+        if (row) row.remove();
+        // Show empty state if table body is now empty
+        const tbody = document.getElementById("memory-tbody");
+        if (tbody && !tbody.children.length) {
+          document.getElementById("memory-list").innerHTML = "";
+          document.getElementById("empty-state").classList.remove("hidden");
+        }
+      } catch (err) {
+        alert("Delete failed: " + err.message);
+      }
+    }
+
+    async function toggleActive(id, isActive) {
+      try {
+        await api(`/api/ai/memory/${id}`, "PATCH", { is_active: isActive });
+        const row = document.getElementById(`row-${id}`);
+        if (row) row.classList.toggle("inactive", !isActive);
+      } catch (err) {
+        alert("Update failed: " + err.message);
+        load(); // re-sync on failure
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

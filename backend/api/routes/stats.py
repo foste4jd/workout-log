@@ -1,9 +1,13 @@
-from collections import Counter, defaultdict
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, time as dt_time
+from zoneinfo import ZoneInfo
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import func
+from backend.db.database import db
+from backend.models.user import User
 from backend.models.workout import Workout
 from backend.models.exercise import Exercise
+from backend.models.exercise_set import ExerciseSet
 
 stats_bp = Blueprint("stats", __name__)
 
@@ -12,70 +16,105 @@ stats_bp = Blueprint("stats", __name__)
 @jwt_required()
 def get_stats():
     user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    tz = ZoneInfo(user.timezone or "UTC")
 
-    workouts = Workout.query.filter_by(user_id=user_id).all()
-    exercises = (
-        Exercise.query
-        .join(Workout)
-        .filter(Workout.user_id == user_id)
-        .all()
-    )
-
-    now = datetime.now(timezone.utc)
+    now = datetime.now(tz)
     today = now.date()
     monday = today - timedelta(days=today.weekday())
     month_start = today.replace(day=1)
+    window_start = today - timedelta(days=83)
 
-    total_workouts = len(workouts)
-    total_minutes = sum(w.duration_minutes or 0 for w in workouts)
-    this_week = sum(1 for w in workouts if w.date.date() >= monday)
-    this_month = sum(1 for w in workouts if w.date.date() >= month_start)
+    # Naive datetimes matching how SQLite stores dates in this app
+    monday_dt = datetime.combine(monday, dt_time.min)
+    month_dt = datetime.combine(month_start, dt_time.min)
+    window_dt = datetime.combine(window_start, dt_time.min)
 
-    # Current streak (count consecutive days with workouts ending today or yesterday)
-    workout_dates = set(w.date.date() for w in workouts)
+    # Scalar aggregates via SQL
+    total_workouts = (
+        db.session.query(func.count(Workout.id))
+        .filter_by(user_id=user_id).scalar() or 0
+    )
+    total_minutes = (
+        db.session.query(func.sum(Workout.duration_minutes))
+        .filter_by(user_id=user_id).scalar() or 0
+    )
+    this_week = (
+        db.session.query(func.count(Workout.id))
+        .filter(Workout.user_id == user_id, Workout.date >= monday_dt)
+        .scalar() or 0
+    )
+    this_month = (
+        db.session.query(func.count(Workout.id))
+        .filter(Workout.user_id == user_id, Workout.date >= month_dt)
+        .scalar() or 0
+    )
+
+    # Current streak — lightweight date-only query
+    date_rows = (
+        db.session.query(func.date(Workout.date))
+        .filter_by(user_id=user_id).distinct().all()
+    )
+    # SQLite returns strings; Postgres returns date objects — normalise to str
+    workout_dates = {str(r[0]) for r in date_rows}
     streak = 0
     check = today
-    if check not in workout_dates:
+    if str(check) not in workout_dates:
         check = today - timedelta(days=1)
-    while check in workout_dates:
+    while str(check) in workout_dates:
         streak += 1
         check -= timedelta(days=1)
 
-    # Personal records — max weight per exercise across all sets
-    pr_map = {}
-    for e in exercises:
-        for s in e.set_records:
-            if s.weight_lb:
-                key = e.name.lower()
-                if key not in pr_map or s.weight_lb > pr_map[key]["weight_lb"]:
-                    pr_map[key] = {
-                        "name": e.name,
-                        "weight_lb": s.weight_lb,
-                        "reps": s.reps,
-                        "sets": len(e.set_records),
-                    }
-    personal_records = sorted(
-        pr_map.values(), key=lambda x: x["weight_lb"], reverse=True
-    )[:10]
-
-    # Top exercises by frequency
-    ex_counter = Counter(e.name for e in exercises)
-    top_exercises = [
-        {"name": n, "count": c} for n, c in ex_counter.most_common(8)
+    # Personal records — max weight per exercise via SQL
+    pr_rows = (
+        db.session.query(
+            Exercise.name,
+            func.max(ExerciseSet.weight_lb).label("max_weight"),
+            func.count(ExerciseSet.id).label("set_count"),
+        )
+        .join(Exercise, ExerciseSet.exercise_id == Exercise.id)
+        .join(Workout, Exercise.workout_id == Workout.id)
+        .filter(Workout.user_id == user_id, ExerciseSet.weight_lb.isnot(None), ExerciseSet.completed == True)
+        .group_by(func.lower(Exercise.name))
+        .order_by(func.max(ExerciseSet.weight_lb).desc())
+        .limit(10)
+        .all()
+    )
+    personal_records = [
+        {"name": r.name, "weight_lb": r.max_weight, "sets": r.set_count}
+        for r in pr_rows
     ]
 
-    # Daily activity for last 84 days (12 weeks)
-    activity_map = defaultdict(int)
-    for w in workouts:
-        activity_map[w.date.date().isoformat()] += 1
+    # Top exercises by frequency via SQL
+    top_rows = (
+        db.session.query(Exercise.name, func.count(Exercise.id).label("cnt"))
+        .join(Workout, Exercise.workout_id == Workout.id)
+        .filter(Workout.user_id == user_id)
+        .group_by(func.lower(Exercise.name))
+        .order_by(func.count(Exercise.id).desc())
+        .limit(8)
+        .all()
+    )
+    top_exercises = [{"name": r.name, "count": r.cnt} for r in top_rows]
 
-    daily_activity = []
-    for i in range(83, -1, -1):
-        d = today - timedelta(days=i)
-        daily_activity.append({
-            "date": d.isoformat(),
-            "count": activity_map.get(d.isoformat(), 0),
-        })
+    # Daily activity — last 84 days via SQL, gaps filled in Python
+    activity_rows = (
+        db.session.query(
+            func.date(Workout.date).label("d"),
+            func.count(Workout.id).label("cnt"),
+        )
+        .filter(Workout.user_id == user_id, Workout.date >= window_dt)
+        .group_by(func.date(Workout.date))
+        .all()
+    )
+    activity_map = {str(r.d): r.cnt for r in activity_rows}
+    daily_activity = [
+        {
+            "date": (today - timedelta(days=i)).isoformat(),
+            "count": activity_map.get((today - timedelta(days=i)).isoformat(), 0),
+        }
+        for i in range(83, -1, -1)
+    ]
 
     return jsonify({
         "total_workouts": total_workouts,

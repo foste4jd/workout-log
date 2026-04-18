@@ -1,685 +1,304 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Workouts – WorkoutLog</title>
-  <link rel="stylesheet" href="/static/css/main.css" />
-</head>
-<body class="app-page">
+{% extends '_base.html' %}
 
-  <!-- Nav -->
-  <nav class="navbar">
-    <span class="nav-logo">WorkoutLog</span>
-    <div class="nav-links">
-      <a href="/dashboard" class="nav-link">Dashboard</a>
-      <a href="/workouts" class="nav-link active">Workouts</a>
-      <a href="/templates" class="nav-link">Templates</a>
-      <a href="/maxes" class="nav-link">Maxes</a>
+{% block title %}Workouts – WorkoutLog{% endblock %}
+
+{% block content %}
+<main class="container home-container">
+
+  {# ── TODAY ────────────────────────────────────────────── #}
+  <section class="wh-section" aria-label="Today's workout">
+    <span class="wh-label" id="today-label">TODAY</span>
+    <div id="today-slot">
+      <div class="home-skeleton" aria-hidden="true"></div>
     </div>
-    <div class="nav-right">
-      <span id="nav-username"></span>
-      <button class="btn btn-ghost unit-toggle" title="Switch weight units">lbs</button>
-      <button id="logout-btn" class="btn btn-ghost">Logout</button>
+  </section>
+
+  {# ── UPCOMING ─────────────────────────────────────────── #}
+  <section class="wh-section" aria-label="Upcoming workouts">
+    <span class="wh-label">UPCOMING</span>
+    <div id="upcoming-slot">
+      <div class="home-skeleton home-skeleton-rail" aria-hidden="true"></div>
     </div>
-  </nav>
+  </section>
 
-  <main class="container">
-    <div class="calendar-layout">
-
-      <!-- Calendar panel -->
-      <div class="calendar-panel">
-        <div class="calendar-nav">
-          <button id="prev-month-btn" class="btn-icon" title="Previous month">&#8249;</button>
-          <h3 id="calendar-month-label"></h3>
-          <button id="next-month-btn" class="btn-icon" title="Next month">&#8250;</button>
-        </div>
-        <div class="cal-weekdays">
-          <div class="cal-weekday">Su</div>
-          <div class="cal-weekday">Mo</div>
-          <div class="cal-weekday">Tu</div>
-          <div class="cal-weekday">We</div>
-          <div class="cal-weekday">Th</div>
-          <div class="cal-weekday">Fr</div>
-          <div class="cal-weekday">Sa</div>
-        </div>
-        <div class="cal-grid" id="cal-grid"></div>
-      </div>
-
-      <!-- Day detail panel -->
-      <div class="day-panel" id="day-panel">
-        <p class="day-panel-empty">Select a day to view or log workouts.</p>
-      </div>
-
+  {# ── RECENT ───────────────────────────────────────────── #}
+  <section class="wh-section" aria-label="Recent workouts">
+    <span class="wh-label">RECENT</span>
+    <div id="recent-slot">
+      <div class="home-skeleton home-skeleton-rail" aria-hidden="true"></div>
     </div>
-  </main>
+  </section>
 
-  <!-- Workout modal -->
-  <div id="modal-overlay" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 id="modal-title">Log Workout</h3>
-        <button id="close-modal-btn" class="btn-icon">&times;</button>
-      </div>
-      <form id="workout-form">
-        <input type="hidden" id="workout-id" />
-        <input type="hidden" id="workout-date" />
-        <div class="form-group">
-          <label for="workout-title">Title <span class="required">*</span></label>
-          <input id="workout-title" type="text" placeholder="e.g. Leg Day" required />
-        </div>
-        <div class="form-group">
-          <label for="workout-duration">Duration (minutes)</label>
-          <input id="workout-duration" type="number" min="1" placeholder="60" />
-        </div>
-        <div class="form-group">
-          <label for="workout-notes">Notes</label>
-          <textarea id="workout-notes" rows="3" placeholder="How did it go?"></textarea>
-        </div>
-        <p id="workout-error" class="form-error hidden"></p>
-        <div class="modal-actions">
-          <button type="button" id="cancel-btn" class="btn btn-ghost">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save</button>
-        </div>
-      </form>
-    </div>
-  </div>
+</main>
 
-  <!-- Exercise modal -->
-  <div id="exercise-modal-overlay" class="modal-overlay hidden">
-    <div class="modal modal-lg">
-      <div class="modal-header">
-        <h3 id="exercise-modal-title">Add Exercise</h3>
-        <button id="close-exercise-modal-btn" class="btn-icon">&times;</button>
-      </div>
-      <form id="exercise-form">
-        <input type="hidden" id="exercise-id" />
-        <input type="hidden" id="exercise-workout-id" />
-        <div class="form-group">
-          <label for="exercise-name">Exercise <span class="required">*</span></label>
-          <div class="autocomplete-wrapper">
-            <input id="exercise-name" type="text" placeholder="Search or type exercise name..." autocomplete="off" required />
-            <ul class="autocomplete-list hidden" id="exercise-suggestions"></ul>
-          </div>
-          <div class="exercise-max-row hidden" id="exercise-max-row">
-            <span class="max-badge" id="max-badge">Max: —</span>
-            <button type="button" class="btn btn-ghost btn-sm" id="save-max-btn">Save as Max</button>
-          </div>
-        </div>
+{# ── Primary action bar — fixed above bottom nav ──────── #}
+<div class="start-workout-bar">
+  <a href="/log" class="btn-start" id="primary-cta">Start Workout</a>
+</div>
+{% endblock %}
 
-        <div class="sets-section">
-          <div class="sets-header">
-            <span class="sets-label">Sets</span>
-            <button type="button" class="btn btn-ghost btn-sm" id="add-set-btn">+ Add Set</button>
-          </div>
-          <div class="sets-col-headers">
-            <span>#</span><span>Reps</span><span>Weight (lbs)</span><span>% of Max</span><span></span>
-          </div>
-          <div id="sets-container"></div>
-        </div>
+{% block scripts %}
+<script>
+(function () {
 
-        <div class="form-group">
-          <label for="exercise-notes">Notes</label>
-          <input id="exercise-notes" type="text" placeholder="e.g. Felt strong" />
-        </div>
-        <p id="exercise-error" class="form-error hidden"></p>
-        <div class="modal-actions">
-          <button type="button" id="cancel-exercise-btn" class="btn btn-ghost">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  /* ── Date utilities ──────────────────────────────────── */
+  function localDateStr() {
+    const d = new Date();
+    return [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, '0'),
+      String(d.getDate()).padStart(2, '0'),
+    ].join('-');
+  }
 
-  <!-- Save as Template modal -->
-  <div id="template-save-overlay" class="modal-overlay hidden">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3>Save as Template</h3>
-        <button id="close-template-save-btn" class="btn-icon">&times;</button>
-      </div>
-      <div class="form-group" style="margin-top:.5rem">
-        <label for="template-save-name">Template name</label>
-        <input id="template-save-name" type="text" placeholder="e.g. 5×5 Workout A" />
-      </div>
-      <p id="template-save-error" class="form-error hidden"></p>
-      <div class="modal-actions">
-        <button id="cancel-template-save-btn" class="btn btn-ghost">Cancel</button>
-        <button id="confirm-template-save-btn" class="btn btn-primary">Save Template</button>
-      </div>
-    </div>
-  </div>
+  function datePlusDays(dateStr, n) {
+    const d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, '0'),
+      String(d.getDate()).padStart(2, '0'),
+    ].join('-');
+  }
 
-  <!-- Delete confirmation -->
-  <div id="delete-overlay" class="modal-overlay hidden">
-    <div class="modal modal-sm">
-      <h3 id="delete-title">Delete workout?</h3>
-      <p>This can't be undone.</p>
-      <div class="modal-actions">
-        <button id="cancel-delete-btn" class="btn btn-ghost">Cancel</button>
-        <button id="confirm-delete-btn" class="btn btn-danger">Delete</button>
-      </div>
-    </div>
-  </div>
+  function shortDate(isoStr) {
+    const d = new Date(isoStr.includes('T') ? isoStr : isoStr + 'T12:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((today - d) / 86400000);
+    if (diff === 0)  return 'Today';
+    if (diff === 1)  return 'Yesterday';
+    if (diff < 0)    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    if (diff < 7)    return d.toLocaleDateString('en-US', { weekday: 'short' });
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
 
-  <script src="/static/js/main.js"></script>
-  <script>
-    if (!localStorage.getItem("token")) window.location.href = "/login";
-    document.getElementById("nav-username").textContent = localStorage.getItem("username") || "";
-    document.getElementById("logout-btn").addEventListener("click", () => {
-      localStorage.clear();
-      window.location.href = "/login";
-    });
+  function upcomingDateLabel(isoStr) {
+    const d = new Date(isoStr.includes('T') ? isoStr : isoStr + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
+  }
 
-    // Exercise library loaded from API via attachLibraryAutocomplete (see main.js)
+  /* ── Weekday in section label ────────────────────────── */
+  (function setTodayLabel() {
+    const wd = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+    document.getElementById('today-label').textContent = 'TODAY · ' + wd;
+  })();
 
-    // ── State ──────────────────────────────────────────────
-    const today = new Date();
-    let calYear = today.getFullYear();
-    let calMonth = today.getMonth();
-    let selectedDateStr = null;
-    let allWorkouts = [];
-    let exerciseCache = {};
-    let trainingMaxMap = {}; // exercise_library_id -> weight
-    let modalSets = [];
-    let currentMax = null;
-
-    const MONTHS = ["January","February","March","April","May","June",
-                    "July","August","September","October","November","December"];
-
-    function makeDateStr(y, m, d) {
-      return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  /* ── Exercise summary (no extra API call) ────────────── */
+  function fmtSets(ex) {
+    const sets = ex.sets || [];
+    if (!sets.length) return '';
+    const n = sets.length;
+    const repsArr = [...new Set(sets.map(s => s.reps).filter(Boolean))];
+    const repsLabel = repsArr.length === 1 ? repsArr[0] + ' reps' : '';
+    const weights = sets.map(s => s.weight_lb).filter(Boolean);
+    if (weights.length) {
+      const maxW = Math.max(...weights);
+      return repsLabel
+        ? n + '×' + repsLabel + ' @ ' + displayWeight(maxW)
+        : n + ' sets @ ' + displayWeight(maxW);
     }
-
-    function workoutsForDate(ds) {
-      return allWorkouts.filter(w => w.date.slice(0,10) === ds);
+    const pcts = sets.map(s => s.percent).filter(Boolean);
+    if (pcts.length) {
+      const minP = Math.min(...pcts), maxP = Math.max(...pcts);
+      const pStr = minP === maxP ? minP + '%' : minP + '–' + maxP + '%';
+      return repsLabel ? n + '×' + repsLabel + ' @ ' + pStr : n + ' sets @ ' + pStr;
     }
+    return repsLabel ? n + '×' + repsLabel : n + ' sets';
+  }
 
-    // ── Load training maxes ────────────────────────────────
-    async function loadMaxes() {
-      const maxes = await api("/api/training-maxes/");
-      trainingMaxMap = {};
-      maxes.forEach(m => { trainingMaxMap[m.exercise_id] = m.training_max_weight; });
-    }
+  /* ── Today: state detection ──────────────────────────── */
+  function determineTodayState(workouts) {
+    if (!workouts.length)                           return 'empty';
+    if (workouts.some(w => w.status === 'in_progress')) return 'in_progress';
+    if (workouts.some(w => w.status === 'planned'))     return 'planned';
+    if (workouts.some(w => w.status === 'completed'))   return 'completed';
+    return 'empty';
+  }
 
-    // ── Calendar ───────────────────────────────────────────
-    function renderCalendar() {
-      document.getElementById("calendar-month-label").textContent = `${MONTHS[calMonth]} ${calYear}`;
-      const grid = document.getElementById("cal-grid");
-      grid.innerHTML = "";
-      const firstDow = new Date(calYear, calMonth, 1).getDay();
-      const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-      const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
-      const todayStr = makeDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+  function primarySession(workouts, state) {
+    return workouts.find(w =>
+      state === 'in_progress' ? w.status === 'in_progress' :
+      state === 'planned'     ? w.status === 'planned' :
+      state === 'completed'   ? w.status === 'completed' : false
+    );
+  }
 
-      for (let i = 0; i < 42; i++) {
-        let ds, isOther = false;
-        if (i < firstDow) {
-          const d = prevMonthDays - firstDow + i + 1;
-          const m = calMonth === 0 ? 11 : calMonth-1;
-          const y = calMonth === 0 ? calYear-1 : calYear;
-          ds = makeDateStr(y, m, d); isOther = true;
-        } else if (i >= firstDow + daysInMonth) {
-          const d = i - firstDow - daysInMonth + 1;
-          const m = calMonth === 11 ? 0 : calMonth+1;
-          const y = calMonth === 11 ? calYear+1 : calYear;
-          ds = makeDateStr(y, m, d); isOther = true;
-        } else {
-          ds = makeDateStr(calYear, calMonth, i - firstDow + 1);
-        }
-        const cell = document.createElement("div");
-        cell.className = "cal-day";
-        if (isOther) cell.classList.add("other-month");
-        if (ds === todayStr) cell.classList.add("today");
-        if (ds === selectedDateStr) cell.classList.add("selected");
-        const numEl = document.createElement("span");
-        numEl.className = "cal-day-num";
-        numEl.textContent = parseInt(ds.slice(8));
-        cell.appendChild(numEl);
-        const dayWos = workoutsForDate(ds);
-        if (dayWos.length > 0) {
-          const dots = document.createElement("div");
-          dots.className = "cal-dots";
-          for (let j = 0; j < Math.min(dayWos.length, 3); j++) {
-            const dot = document.createElement("div");
-            dot.className = "cal-dot";
-            dots.appendChild(dot);
-          }
-          cell.appendChild(dots);
-        }
-        cell.dataset.date = ds;
-        cell.addEventListener("click", () => selectDay(ds));
-        grid.appendChild(cell);
-      }
-    }
+  /* ── Chevron SVG ─────────────────────────────────────── */
+  const CHEVRON = `<svg class="wh-chevron" width="16" height="16" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polyline points="9 18 15 12 9 6"/>
+  </svg>`;
 
-    function selectDay(ds) { selectedDateStr = ds; renderCalendar(); renderDayPanel(); }
+  /* ── TODAY rendering ─────────────────────────────────── */
+  function renderTodayEmpty(templates) {
+    const chips = templates.slice(0, 5).map(t =>
+      `<a href="/log?template=${t.id}" class="template-chip" aria-label="Start ${escapeHtml(t.name)}">${escapeHtml(t.name)}</a>`
+    ).join('') + `<a href="/log" class="template-chip template-chip-new">+ New</a>`;
 
-    document.getElementById("prev-month-btn").addEventListener("click", () => {
-      if (calMonth === 0) { calMonth = 11; calYear--; } else calMonth--;
-      renderCalendar();
-    });
-    document.getElementById("next-month-btn").addEventListener("click", () => {
-      if (calMonth === 11) { calMonth = 0; calYear++; } else calMonth++;
-      renderCalendar();
-    });
+    document.getElementById('today-slot').innerHTML = `
+      <div class="wh-today-empty">
+        <span class="wh-label">QUICK START</span>
+        <div class="template-rail" role="list">${chips}</div>
+      </div>`;
+  }
 
-    // ── Day panel ──────────────────────────────────────────
-    function renderDayPanel() {
-      const panel = document.getElementById("day-panel");
-      if (!selectedDateStr) {
-        panel.innerHTML = '<p class="day-panel-empty">Select a day to view or log workouts.</p>';
-        return;
-      }
-      const dayWos = workoutsForDate(selectedDateStr);
-      const displayDate = new Date(selectedDateStr + "T12:00:00").toLocaleDateString(undefined, {
-        weekday: "long", year: "numeric", month: "long", day: "numeric",
-      });
-      panel.innerHTML = `
-        <div class="day-panel-header">
-          <span class="day-panel-date">${displayDate}</span>
-          <button class="btn btn-ghost btn-sm" id="new-blank-btn">+ Blank</button>
-          <button class="btn btn-primary" id="add-workout-btn">+ From Template</button>
+  function renderTodayShell(state, session) {
+    if (!session) return;
+    const badge = {
+      planned:     '<span class="wh-badge wh-badge-planned">Planned</span>',
+      in_progress: '<span class="wh-badge wh-badge-in-progress">In Progress</span>',
+      completed:   '<span class="wh-badge wh-badge-done">Done</span>',
+    }[state] || '';
+
+    const cardClass = state === 'in_progress' ? ' wh-card-in-progress' : '';
+    const href = '/session/' + session.id;
+
+    document.getElementById('today-slot').innerHTML = `
+      <a href="${href}" class="wh-session-card${cardClass}" aria-label="Open ${escapeHtml(session.title)}">
+        <div class="wh-card-header">
+          <span class="wh-session-name">${escapeHtml(session.title)}</span>
+          ${badge}
         </div>
-        ${dayWos.length === 0
-          ? '<p class="day-panel-empty" style="padding:2rem 0">No workouts logged for this day.</p>'
-          : `<div class="day-workouts">${dayWos.map(renderWorkoutCard).join("")}</div>`
-        }
-      `;
-      document.getElementById("add-workout-btn").addEventListener("click", () => { window.location.href = "/templates"; });
-      document.getElementById("new-blank-btn").addEventListener("click", () => { window.location.href = `/log?date=${selectedDateStr}`; });
-      panel.querySelectorAll(".edit-workout-btn").forEach(btn =>
-        btn.addEventListener("click", () => openEditWorkoutModal(Number(btn.dataset.id)))
-      );
-      panel.querySelectorAll(".delete-workout-btn").forEach(btn =>
-        btn.addEventListener("click", () => openDeleteModal("workout", Number(btn.dataset.id)))
-      );
-      panel.querySelectorAll(".add-exercise-btn").forEach(btn =>
-        btn.addEventListener("click", () => openCreateExerciseModal(Number(btn.dataset.workoutId)))
-      );
-      panel.querySelectorAll(".copy-workout-btn").forEach(btn =>
-        btn.addEventListener("click", async () => {
-          const newSession = await api(`/api/workouts/${btn.dataset.id}/copy`, "POST",
-            { date: selectedDateStr + "T12:00:00" });
-          window.location.href = `/session/${newSession.id}`;
-        })
-      );
-      panel.querySelectorAll(".save-template-btn").forEach(btn =>
-        btn.addEventListener("click", () => openSaveTemplateModal(Number(btn.dataset.id), btn.dataset.title))
-      );
-      dayWos.forEach(w => loadExercises(w.id));
-    }
+        <div class="wh-card-divider" aria-hidden="true"></div>
+        <div id="today-exercises" class="wh-ex-list" aria-label="Exercises">
+          <div class="wh-ex-skeleton"></div>
+          <div class="wh-ex-skeleton"></div>
+          <div class="wh-ex-skeleton"></div>
+        </div>
+      </a>`;
+  }
 
-    function statusBadge(status) {
-      if (status === "planned") return `<span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">Planned</span>`;
-      if (status === "in_progress") return `<span style="font-size:.7rem;color:var(--accent);margin-left:.4rem">In Progress</span>`;
-      return "";
+  function renderTodayExercises(exercises) {
+    const slot = document.getElementById('today-exercises');
+    if (!slot) return;
+    if (!exercises.length) {
+      slot.innerHTML = '<span class="wh-ex-name" style="color:var(--text-muted)">No exercises logged yet.</span>';
+      return;
     }
+    const rows = exercises.slice(0, 4).map(ex => {
+      const detail = fmtSets(ex);
+      return `<div class="wh-ex-row">
+        <span class="wh-ex-name">${escapeHtml(ex.name)}</span>
+        ${detail ? `<span class="wh-ex-detail">${escapeHtml(detail)}</span>` : ''}
+      </div>`;
+    }).join('');
+    const more = exercises.length > 4
+      ? `<p class="wh-ex-more">+${exercises.length - 4} more</p>` : '';
+    slot.innerHTML = rows + more;
+  }
 
-    function renderWorkoutCard(w) {
+  /* ── CTA update ──────────────────────────────────────── */
+  function updateCTA(state, session) {
+    const cta = document.getElementById('primary-cta');
+    if (state === 'in_progress' && session) {
+      cta.textContent = 'Resume Session';
+      cta.href = '/session/' + session.id;
+    } else if (state === 'planned' && session) {
+      cta.textContent = 'Start Session';
+      cta.href = '/session/' + session.id;
+    } else if (state === 'completed') {
+      cta.textContent = 'Log Another';
+      cta.href = '/log';
+    } else {
+      cta.textContent = 'Start Workout';
+      cta.href = '/log';
+    }
+  }
+
+  /* ── UPCOMING rendering ──────────────────────────────── */
+  function renderUpcoming(workouts) {
+    const slot = document.getElementById('upcoming-slot');
+    if (!workouts.length) {
+      slot.innerHTML = `<p class="wh-empty-line">Nothing scheduled. <a href="/programs">Programs →</a></p>`;
+      return;
+    }
+    const rows = workouts.slice(0, 5).map(w => `
+      <a href="/session/${w.id}" class="wh-list-row" aria-label="${escapeHtml(w.title)}">
+        <div class="wh-list-left">
+          <span class="wh-list-date">${upcomingDateLabel(w.date)}</span>
+          <span class="wh-list-name">${escapeHtml(w.title)}</span>
+        </div>
+        <div class="wh-list-right">
+          ${CHEVRON}
+        </div>
+      </a>`).join('');
+    slot.innerHTML = `<div class="wh-list">${rows}</div>`;
+  }
+
+  /* ── RECENT rendering ────────────────────────────────── */
+  function renderRecent(workouts) {
+    const slot = document.getElementById('recent-slot');
+    if (!workouts.length) {
+      slot.innerHTML = `<p class="wh-empty-line">Nothing yet.</p>`;
+      return;
+    }
+    const rows = workouts.slice(0, 5).map(w => {
+      const meta = w.duration_minutes ? w.duration_minutes + ' min' : '';
       return `
-        <div class="day-workout-card" data-id="${w.id}">
-          <div class="day-workout-header">
-            <span class="day-workout-title">${escapeHtml(w.title)}${statusBadge(w.status)}</span>
-            <div class="card-actions">
-              <a href="/session/${w.id}" class="btn-icon" title="Open session" style="text-decoration:none">&#9654;</a>
-              <button class="btn-icon copy-workout-btn" data-id="${w.id}" title="Copy to new session">&#10697;</button>
-              <button class="btn-icon save-template-btn" data-id="${w.id}" data-title="${escapeHtml(w.title)}" title="Save as template">&#128278;</button>
-              <button class="btn-icon edit-workout-btn" data-id="${w.id}" title="Edit">&#9998;</button>
-              <button class="btn-icon delete-workout-btn" data-id="${w.id}" title="Delete">&times;</button>
-            </div>
+        <a href="/session/${w.id}" class="wh-list-row" aria-label="${escapeHtml(w.title)}">
+          <div class="wh-list-left">
+            <span class="wh-list-date">${shortDate(w.date).toUpperCase()}</span>
+            <span class="wh-list-name">${escapeHtml(w.title)}</span>
           </div>
-          ${w.duration_minutes ? `<p class="day-workout-meta">${w.duration_minutes} min</p>` : ""}
-          ${w.notes ? `<p class="workout-notes">${escapeHtml(w.notes)}</p>` : ""}
-          <div class="exercise-section">
-            <div class="exercise-section-header">
-              <span class="exercise-section-label">Exercises</span>
-              <button class="btn-icon add-exercise-btn" data-workout-id="${w.id}">+ Add</button>
-            </div>
-            <ul class="exercise-list" id="exercises-${w.id}">
-              <li class="exercise-loading">Loading...</li>
-            </ul>
+          <div class="wh-list-right">
+            ${meta ? `<span class="wh-list-meta">${meta}</span>` : ''}
+            ${CHEVRON}
           </div>
-        </div>
-      `;
+        </a>`;
+    }).join('');
+    slot.innerHTML = `<div class="wh-list">${rows}</div>`;
+  }
+
+  /* ── Main load sequence ──────────────────────────────── */
+  async function load() {
+    const today   = localDateStr();
+    const tomorrow = datePlusDays(today, 1);
+    const in7     = datePlusDays(today, 7);
+
+    let todayWos = [], upcomingWos = [], recentWos = [], templates = [];
+
+    try {
+      [todayWos, upcomingWos, recentWos, templates] = await Promise.all([
+        api(`/api/workouts/?date_from=${today}&date_to=${today}`),
+        api(`/api/workouts/?status=planned&date_from=${tomorrow}&date_to=${in7}&limit=5`),
+        api(`/api/workouts/?status=completed&limit=5`),
+        api('/api/templates/'),
+      ]);
+    } catch (err) {
+      document.getElementById('today-slot').innerHTML =
+        `<p class="wh-empty-line" style="color:var(--danger)">${err.message}</p>`;
+      return;
     }
 
-    // ── Exercise loading ───────────────────────────────────
-    async function loadExercises(workoutId) {
-      const ul = document.getElementById(`exercises-${workoutId}`);
-      if (!ul) return;
+    const state   = determineTodayState(todayWos);
+    const session = primarySession(todayWos, state);
+
+    /* Render non-exercises content immediately */
+    if (state === 'empty') {
+      renderTodayEmpty(templates);
+    } else {
+      renderTodayShell(state, session);
+    }
+    renderUpcoming(upcomingWos);
+    renderRecent(recentWos);
+    updateCTA(state, session);
+
+    /* Fetch exercises for today's session (sequential but fast — local DB) */
+    if (session) {
       try {
-        const exercises = await api(`/api/workouts/${workoutId}/exercises`);
-        exerciseCache[workoutId] = exercises;
-        if (!exercises.length) {
-          ul.innerHTML = '<li class="exercise-empty">No exercises logged yet.</li>';
-          return;
-        }
-        ul.innerHTML = exercises.map(e => {
-          const chips = (e.sets || []).map(s => {
-            const label = s.reps && s.weight_lb ? `${s.reps}×${toDisplayWeight(s.weight_lb)}${unitLabel()}`
-                        : s.reps ? `${s.reps} reps`
-                        : s.weight_lb ? `${s.weight_lb}lbs` : null;
-            return label ? `<span class="set-chip">${label}</span>` : "";
-          }).join("");
-          const summary = formatExerciseStats(e);
-          return `
-            <li class="exercise-item" data-id="${e.id}">
-              <div class="exercise-info">
-                <span class="exercise-name">${escapeHtml(e.name)}</span>
-                ${summary ? `<span class="exercise-stats">${summary}</span>` : ""}
-                ${chips ? `<div class="set-chips">${chips}</div>` : ""}
-                ${e.notes ? `<span class="exercise-notes">${escapeHtml(e.notes)}</span>` : ""}
-              </div>
-              <div class="exercise-actions">
-                <button class="btn-icon edit-exercise-btn" data-id="${e.id}" data-workout-id="${e.workout_id}" title="Edit">&#9998;</button>
-                <button class="btn-icon delete-exercise-btn" data-id="${e.id}" data-workout-id="${e.workout_id}" title="Delete">&times;</button>
-              </div>
-            </li>
-          `;
-        }).join("");
-        ul.querySelectorAll(".edit-exercise-btn").forEach(btn =>
-          btn.addEventListener("click", () => openEditExerciseModal(Number(btn.dataset.id), exerciseCache[workoutId]))
-        );
-        ul.querySelectorAll(".delete-exercise-btn").forEach(btn =>
-          btn.addEventListener("click", () => openDeleteModal("exercise", Number(btn.dataset.id), Number(btn.dataset.workoutId)))
-        );
-      } catch (err) {
-        ul.innerHTML = `<li class="exercise-empty error">${err.message}</li>`;
+        const exercises = await api(`/api/workouts/${session.id}/exercises`);
+        renderTodayExercises(exercises);
+      } catch (_) {
+        const slot = document.getElementById('today-exercises');
+        if (slot) slot.innerHTML = '';
       }
     }
+  }
 
-    function formatExerciseStats(e) {
-      if (!e.sets || !e.sets.length) return "";
-      const n = e.sets.length;
-      const weights = e.sets.map(s => s.weight_lb).filter(Boolean);
-      const repsArr = [...new Set(e.sets.map(s => s.reps).filter(Boolean))];
-      const repsLabel = repsArr.length === 1 ? `${repsArr[0]} reps` : "";
-      if (!weights.length) return repsLabel ? `${n} sets × ${repsLabel}` : `${n} sets`;
-      const minW = Math.min(...weights), maxW = Math.max(...weights);
-      const wLabel = minW === maxW ? displayWeight(minW) : `${toDisplayWeight(minW)}–${displayWeight(maxW)}`;
-      return repsLabel ? `${n} sets × ${repsLabel} @ ${wLabel}` : `${n} sets @ ${wLabel}`;
-    }
+  initUnitToggle(() => load());
+  load();
 
-    // ── Workout modal ──────────────────────────────────────
-    const overlay = document.getElementById("modal-overlay");
-    const workoutForm = document.getElementById("workout-form");
-
-    function openCreateWorkoutModal(date) {
-      document.getElementById("modal-title").textContent = "Log Workout";
-      workoutForm.reset();
-      document.getElementById("workout-id").value = "";
-      document.getElementById("workout-date").value = date || "";
-      document.getElementById("workout-error").classList.add("hidden");
-      overlay.classList.remove("hidden");
-    }
-
-    function openEditWorkoutModal(id) {
-      const w = allWorkouts.find(x => x.id === id);
-      if (!w) return;
-      document.getElementById("modal-title").textContent = "Edit Workout";
-      document.getElementById("workout-id").value = w.id;
-      document.getElementById("workout-date").value = "";
-      document.getElementById("workout-title").value = w.title;
-      document.getElementById("workout-duration").value = w.duration_minutes || "";
-      document.getElementById("workout-notes").value = w.notes || "";
-      document.getElementById("workout-error").classList.add("hidden");
-      overlay.classList.remove("hidden");
-    }
-
-    function closeWorkoutModal() { overlay.classList.add("hidden"); }
-    document.getElementById("close-modal-btn").addEventListener("click", closeWorkoutModal);
-    document.getElementById("cancel-btn").addEventListener("click", closeWorkoutModal);
-    overlay.addEventListener("click", e => { if (e.target === overlay) closeWorkoutModal(); });
-
-    workoutForm.addEventListener("submit", async e => {
-      e.preventDefault();
-      const errorEl = document.getElementById("workout-error");
-      const id = document.getElementById("workout-id").value;
-      const dateVal = document.getElementById("workout-date").value;
-      const payload = {
-        title: document.getElementById("workout-title").value,
-        duration_minutes: Number(document.getElementById("workout-duration").value) || null,
-        notes: document.getElementById("workout-notes").value || null,
-      };
-      if (dateVal) payload.date = dateVal + "T12:00:00";
-      try {
-        if (id) { await api(`/api/workouts/${id}`, "PUT", payload); }
-        else { await api("/api/workouts/", "POST", payload); }
-        closeWorkoutModal();
-        await loadAllWorkouts();
-        renderDayPanel();
-      } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.classList.remove("hidden");
-      }
-    });
-
-    // ── Exercise modal ─────────────────────────────────────
-    const exerciseOverlay = document.getElementById("exercise-modal-overlay");
-    const exerciseForm = document.getElementById("exercise-form");
-    const acInput = document.getElementById("exercise-name");
-    const acList = document.getElementById("exercise-suggestions");
-    let selectedLibraryId = null;
-
-    // Attach library autocomplete (async — library loaded once from API)
-    attachLibraryAutocomplete(acInput, acList, item => {
-      selectedLibraryId = item.id;
-      updateMaxDisplay(item.id);
-    });
-
-    function updateMaxDisplay(libraryId) {
-      const maxRow = document.getElementById("exercise-max-row");
-      const maxBadge = document.getElementById("max-badge");
-      // Look up training max by exercise_library_id
-      const rec = libraryId ? trainingMaxMap[libraryId] : null;
-      currentMax = rec || null;
-      if (currentMax) {
-        maxBadge.textContent = `TM: ${currentMax} lbs`;
-        maxRow.classList.remove("hidden");
-      } else {
-        maxRow.classList.add("hidden");
-      }
-      renderSetRows();
-    }
-
-    function openCreateExerciseModal(workoutId) {
-      document.getElementById("exercise-modal-title").textContent = "Add Exercise";
-      exerciseForm.reset();
-      document.getElementById("exercise-id").value = "";
-      document.getElementById("exercise-workout-id").value = workoutId;
-      document.getElementById("exercise-error").classList.add("hidden");
-      document.getElementById("exercise-max-row").classList.add("hidden");
-      closeAcList();
-      modalSets = [{ reps: 5, weight_lb: null }, { reps: 5, weight_lb: null },
-                   { reps: 5, weight_lb: null }, { reps: 5, weight_lb: null },
-                   { reps: 5, weight_lb: null }];
-      currentMax = null;
-      renderSetRows();
-      exerciseOverlay.classList.remove("hidden");
-      setTimeout(() => acInput.focus(), 50);
-    }
-
-    function openEditExerciseModal(id, exercises) {
-      const e = exercises.find(x => x.id === id);
-      if (!e) return;
-      document.getElementById("exercise-modal-title").textContent = "Edit Exercise";
-      document.getElementById("exercise-id").value = e.id;
-      document.getElementById("exercise-workout-id").value = e.workout_id;
-      acInput.value = e.name;
-      document.getElementById("exercise-notes").value = e.notes || "";
-      document.getElementById("exercise-error").classList.add("hidden");
-      closeAcList();
-      modalSets = (e.sets || []).map(s => ({ reps: s.reps, weight_lb: s.weight_lb }));
-      if (!modalSets.length) modalSets = [{ reps: null, weight_lb: null }];
-      updateMaxDisplay(e.name);
-      exerciseOverlay.classList.remove("hidden");
-    }
-
-    function closeExerciseModal() { exerciseOverlay.classList.add("hidden"); closeAcList(); }
-    document.getElementById("close-exercise-modal-btn").addEventListener("click", closeExerciseModal);
-    document.getElementById("cancel-exercise-btn").addEventListener("click", closeExerciseModal);
-    exerciseOverlay.addEventListener("click", e => { if (e.target === exerciseOverlay) closeExerciseModal(); });
-
-    // ── Set rows ───────────────────────────────────────────
-    function renderSetRows() {
-      const container = document.getElementById("sets-container");
-      container.innerHTML = modalSets.map((s, i) => {
-        const pct = (currentMax && s.weight_lb) ? Math.round(s.weight_lb / currentMax * 100) : "";
-        return `
-          <div class="set-row" data-idx="${i}">
-            <span class="set-num">${i + 1}</span>
-            <input type="number" class="set-reps" value="${s.reps || ""}" min="1" placeholder="5" />
-            <input type="number" class="set-lb" value="${s.weight_lb || ""}" min="0" step="2.5" placeholder="lbs" />
-            <input type="number" class="set-pct" value="${pct}" min="1" max="200" placeholder="%" ${!currentMax ? "disabled title='Set a personal max first'" : ""} />
-            <button type="button" class="btn-icon remove-set-btn" data-idx="${i}">&times;</button>
-          </div>
-        `;
-      }).join("");
-
-      container.querySelectorAll(".set-reps").forEach((input, i) => {
-        input.addEventListener("input", () => { modalSets[i].reps = parseInt(input.value) || null; });
-      });
-
-      container.querySelectorAll(".set-lb").forEach((input, i) => {
-        input.addEventListener("input", () => {
-          modalSets[i].weight_lb = parseFloat(input.value) || null;
-          if (currentMax && modalSets[i].weight_lb) {
-            const pct = Math.round(modalSets[i].weight_lb / currentMax * 100);
-            container.querySelectorAll(".set-pct")[i].value = pct;
-          } else {
-            container.querySelectorAll(".set-pct")[i].value = "";
-          }
-        });
-      });
-
-      container.querySelectorAll(".set-pct").forEach((input, i) => {
-        input.addEventListener("input", () => {
-          const pct = parseFloat(input.value);
-          if (currentMax && pct) {
-            const lb = Math.round(currentMax * pct / 100 / 2.5) * 2.5;
-            modalSets[i].weight_lb = lb;
-            container.querySelectorAll(".set-lb")[i].value = lb;
-          }
-        });
-      });
-
-      container.querySelectorAll(".remove-set-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const idx = parseInt(btn.dataset.idx);
-          modalSets.splice(idx, 1);
-          renderSetRows();
-        });
-      });
-    }
-
-    document.getElementById("add-set-btn").addEventListener("click", () => {
-      const last = modalSets[modalSets.length - 1];
-      modalSets.push({ reps: last ? last.reps : 5, weight_lb: last ? last.weight_lb : null });
-      renderSetRows();
-    });
-
-    document.getElementById("save-max-btn").addEventListener("click", async () => {
-      if (!selectedLibraryId) return;
-      const maxWeight = Math.max(...modalSets.map(s => s.weight_lb || 0));
-      if (!maxWeight) return;
-      await api("/api/training-maxes/", "POST", {
-        exercise_id: selectedLibraryId,
-        training_max_weight: maxWeight,
-      });
-      await loadMaxes();
-      updateMaxDisplay(selectedLibraryId);
-    });
-
-    // Autocomplete wired up via attachLibraryAutocomplete (above)
-
-    exerciseForm.addEventListener("submit", async e => {
-      e.preventDefault();
-      const errorEl = document.getElementById("exercise-error");
-      const id = document.getElementById("exercise-id").value;
-      const workoutId = document.getElementById("exercise-workout-id").value;
-      const sets = modalSets
-        .filter(s => s.reps || s.weight_lb)
-        .map((s, i) => ({ set_number: i+1, reps: s.reps, weight_lb: s.weight_lb }));
-      const payload = {
-        name: acInput.value,
-        notes: document.getElementById("exercise-notes").value || null,
-        sets,
-      };
-      try {
-        if (id) { await api(`/api/exercises/${id}`, "PUT", payload); }
-        else { await api(`/api/workouts/${workoutId}/exercises`, "POST", payload); }
-        closeExerciseModal();
-        loadExercises(Number(workoutId));
-      } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.classList.remove("hidden");
-      }
-    });
-
-    // ── Delete ─────────────────────────────────────────────
-    let pendingDelete = null;
-    const deleteOverlay = document.getElementById("delete-overlay");
-
-    function openDeleteModal(type, id, workoutId = null) {
-      pendingDelete = { type, id, workoutId };
-      document.getElementById("delete-title").textContent = type === "workout" ? "Delete workout?" : "Delete exercise?";
-      deleteOverlay.classList.remove("hidden");
-    }
-
-    document.getElementById("cancel-delete-btn").addEventListener("click", () => { deleteOverlay.classList.add("hidden"); });
-    document.getElementById("confirm-delete-btn").addEventListener("click", async () => {
-      const { type, id, workoutId } = pendingDelete;
-      if (type === "workout") { await api(`/api/workouts/${id}`, "DELETE"); await loadAllWorkouts(); renderDayPanel(); }
-      else { await api(`/api/exercises/${id}`, "DELETE"); loadExercises(workoutId); }
-      deleteOverlay.classList.add("hidden");
-    });
-
-    // ── Save as Template ───────────────────────────────────
-    let templateSaveWorkoutId = null;
-    const templateSaveOverlay = document.getElementById("template-save-overlay");
-
-    function openSaveTemplateModal(workoutId, defaultName) {
-      templateSaveWorkoutId = workoutId;
-      document.getElementById("template-save-name").value = defaultName || "";
-      document.getElementById("template-save-error").classList.add("hidden");
-      templateSaveOverlay.classList.remove("hidden");
-      setTimeout(() => document.getElementById("template-save-name").select(), 50);
-    }
-
-    function closeSaveTemplateModal() { templateSaveOverlay.classList.add("hidden"); }
-    document.getElementById("close-template-save-btn").addEventListener("click", closeSaveTemplateModal);
-    document.getElementById("cancel-template-save-btn").addEventListener("click", closeSaveTemplateModal);
-    templateSaveOverlay.addEventListener("click", e => { if (e.target === templateSaveOverlay) closeSaveTemplateModal(); });
-
-    document.getElementById("confirm-template-save-btn").addEventListener("click", async () => {
-      const name = document.getElementById("template-save-name").value.trim();
-      const errorEl = document.getElementById("template-save-error");
-      if (!name) { errorEl.textContent = "Template name is required."; errorEl.classList.remove("hidden"); return; }
-      try {
-        await api(`/api/workouts/${templateSaveWorkoutId}/save-as-template`, "POST", { name });
-        closeSaveTemplateModal();
-        // Brief toast-style feedback
-        const toast = document.createElement("div");
-        toast.textContent = `Template "${name}" saved.`;
-        toast.style.cssText = "position:fixed;bottom:1.5rem;right:1.5rem;background:var(--accent);color:#fff;padding:.6rem 1.1rem;border-radius:8px;font-size:.88rem;z-index:9999;box-shadow:0 2px 10px rgba(0,0,0,.25)";
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-      } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.classList.remove("hidden");
-      }
-    });
-
-    // ── Init ───────────────────────────────────────────────
-    async function loadAllWorkouts() {
-      allWorkouts = await api("/api/workouts/", "GET");
-      renderCalendar();
-    }
-
-    initUnitToggle(() => { if (selectedDateStr) renderDayPanel(); });
-    selectedDateStr = makeDateStr(today.getFullYear(), today.getMonth(), today.getDate());
-    Promise.all([loadAllWorkouts(), loadMaxes()]).then(() => renderDayPanel());
-  </script>
-</body>
-</html>
+})();
+</script>
+{% endblock %}

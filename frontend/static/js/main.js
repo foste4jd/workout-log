@@ -1,19 +1,18 @@
+// iOS Safari: `:active` only fires reliably with a touchstart listener present.
+document.addEventListener('touchstart', function(){}, {passive: true});
+
 /**
  * Shared API helper — automatically attaches JWT and throws on error.
  */
 async function api(url, method = "GET", body = null) {
-  const headers = { "Content-Type": "application/json" };
-  const token = localStorage.getItem("token");
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-
   const res = await fetch(url, {
     method,
-    headers,
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: body ? JSON.stringify(body) : null,
   });
 
   if (res.status === 401) {
-    localStorage.clear();
     window.location.href = "/login";
     return;
   }
@@ -96,8 +95,11 @@ function initUnitToggle(onToggle) {
   syncButtons();
   document.querySelectorAll(".unit-toggle").forEach(btn => {
     btn.addEventListener("click", () => {
-      localStorage.setItem("unit", getUnit() === "kg" ? "lb" : "kg");
+      const newUnit = getUnit() === "kg" ? "lb" : "kg";
+      localStorage.setItem("unit", newUnit);
       syncButtons();
+      // Persist to server (fire-and-forget)
+      api("/api/users/me", "PATCH", { unit: newUnit }).catch(() => {});
       if (onToggle) onToggle();
     });
   });
@@ -157,4 +159,112 @@ async function attachLibraryAutocomplete(input, listEl, onSelect) {
   });
   input.addEventListener("blur", () => setTimeout(close, 150));
   input.addEventListener("focus", () => { if (input.value.trim()) renderMatches(input.value.trim()); });
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+/** Wire up #logout-btn. Safe to call even if the button is absent. */
+function initLogout() {
+  const btn = document.getElementById("logout-btn");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    try { await api("/api/users/logout", "POST"); } catch (_) {}
+    window.location.href = "/login";
+  });
+}
+
+// ── Toast notifications ───────────────────────────────────────────────────────
+
+/**
+ * Show a brief toast message.
+ * type: "success" | "error" | "info"  (default: "info")
+ * duration: ms before auto-dismiss  (default: 3000)
+ */
+function showToast(message, type = "info", duration = 3000) {
+  let container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add("toast-visible"));
+
+  setTimeout(() => {
+    toast.classList.remove("toast-visible");
+    toast.addEventListener("transitionend", () => toast.remove(), { once: true });
+  }, duration);
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+
+/** Open a modal by id. Adds .modal-open to <body> to prevent scroll. */
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add("open");
+  document.body.classList.add("modal-open");
+  el.addEventListener("click", _modalBackdropHandler);
+}
+
+/** Close a modal by id. */
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove("open");
+  document.body.classList.remove("modal-open");
+  el.removeEventListener("click", _modalBackdropHandler);
+}
+
+function _modalBackdropHandler(e) {
+  if (e.target === e.currentTarget) closeModal(e.currentTarget.id);
+}
+
+// ── Bottom-sheet helpers ──────────────────────────────────────────────────────
+
+/** Slide a bottom sheet into view. */
+function openSheet(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add("open");
+  document.body.classList.add("sheet-open");
+}
+
+/** Dismiss a bottom sheet. */
+function closeSheet(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove("open");
+  document.body.classList.remove("sheet-open");
+}
+
+// ── Inline confirm ────────────────────────────────────────────────────────────
+
+/**
+ * Replace the contents of cellEl with an inline "message [Yes] [No]" prompt.
+ * onConfirm() is called if the user clicks Yes.
+ * The cell is restored on No (or if onCancel is provided, that runs first).
+ */
+function confirmInline(cellEl, onConfirm, message = "Delete?", onCancel = null) {
+  const original = cellEl.innerHTML;
+
+  cellEl.innerHTML = `
+    <span class="confirm-inline-msg">${escapeHtml(message)}</span>
+    <button class="btn btn-danger btn-sm confirm-inline-yes">Yes</button>
+    <button class="btn btn-ghost btn-sm confirm-inline-no">No</button>
+  `;
+
+  cellEl.querySelector(".confirm-inline-yes").addEventListener("click", () => {
+    onConfirm();
+  });
+
+  cellEl.querySelector(".confirm-inline-no").addEventListener("click", () => {
+    if (onCancel) onCancel();
+    cellEl.innerHTML = original;
+  });
 }

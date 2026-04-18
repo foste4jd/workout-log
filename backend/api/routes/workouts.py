@@ -9,6 +9,29 @@ workouts_bp = Blueprint("workouts", __name__, url_prefix="/api/workouts")
 @jwt_required()
 def list_workouts():
     user_id = int(get_jwt_identity())
+    status    = request.args.get("status")
+    date_from = request.args.get("date_from")
+    date_to   = request.args.get("date_to")
+    limit     = request.args.get("limit", type=int)
+    page      = request.args.get("page", type=int)
+
+    if status or date_from or date_to:
+        workouts = workout_service.get_workouts_filtered(
+            user_id, status=status, date_from=date_from,
+            date_to=date_to, limit=limit,
+        )
+        return jsonify([w.to_dict() for w in workouts])
+
+    if page is not None:
+        per_page = limit or 100
+        p = workout_service.get_workouts_page(user_id, page, per_page)
+        return jsonify({
+            "workouts": [w.to_dict() for w in p.items],
+            "total": p.total,
+            "page": p.page,
+            "pages": p.pages,
+            "has_next": p.has_next,
+        })
     workouts = workout_service.get_workouts(user_id)
     return jsonify([w.to_dict() for w in workouts])
 
@@ -55,6 +78,12 @@ def complete_workout(workout_id):
         return jsonify({"error": "Workout not found"}), 404
     data = request.get_json() or {}
     workout = workout_service.complete_workout(workout, data.get("duration_minutes"))
+    # Lightweight pattern detection — fire-and-forget, never blocks response
+    try:
+        from backend.services import ai_trainer_service
+        ai_trainer_service.detect_patterns_on_save(user_id, workout_id)
+    except Exception:
+        pass
     return jsonify(workout.to_dict())
 
 

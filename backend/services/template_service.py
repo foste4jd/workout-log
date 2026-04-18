@@ -67,7 +67,7 @@ def _replace_exercises(template, exercises_data):
                 set_number=j,
                 set_type=s.get("set_type", "working"),
                 reps=s.get("reps"),
-                weight=s.get("weight"),
+                weight_lb=s.get("weight_lb"),
                 percent=s.get("percent"),
                 duration_seconds=s.get("duration_seconds"),
             ))
@@ -102,9 +102,9 @@ def create_session_from_template(template, user_id, date=None):
                 exercise_id=ex.id,
                 set_number=ts.set_number,
                 set_type=ts.set_type or "working",
-                reps=ts.reps,
-                weight_lb=ts.weight,
-                percent=ts.percent,
+                planned_reps=ts.reps,
+                planned_weight_lb=ts.weight_lb,
+                planned_percent=ts.percent,
                 duration_seconds=ts.duration_seconds,
                 completed=False,
             ))
@@ -132,6 +132,7 @@ def copy_session(source_workout, user_id, date=None):
             workout_id=new_session.id,
             exercise_library_id=ex.exercise_library_id,
             name=ex.name,
+            notes=ex.notes,
         )
         db.session.add(new_ex)
         db.session.flush()
@@ -140,9 +141,9 @@ def copy_session(source_workout, user_id, date=None):
                 exercise_id=new_ex.id,
                 set_number=s.set_number,
                 set_type=s.set_type,
-                reps=s.reps,
-                weight_lb=s.weight_lb,
-                percent=s.percent,
+                planned_reps=s.reps,
+                planned_weight_lb=s.weight_lb,
+                planned_percent=s.percent,
                 duration_seconds=s.duration_seconds,
                 completed=False,
             ))
@@ -164,7 +165,7 @@ def create_template_from_workout(user_id, workout, name, description=None):
                 {
                     "set_type": s.set_type,
                     "reps": s.reps,
-                    "weight": s.weight_lb,
+                    "weight_lb": s.weight_lb,
                     "percent": s.percent,
                 }
                 for s in ex.set_records

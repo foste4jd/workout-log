@@ -135,17 +135,22 @@ with app.app_context():
 
     existing = User.query.filter_by(username="admin").first()
     if existing:
+        # Clear workouts and personal maxes but keep the user record so its ID
+        # doesn't change — templates are keyed to user_id and would become
+        # orphaned if the user were deleted and re-created.
         for w in existing.workouts:
             db.session.delete(w)
         PersonalMax.query.filter_by(user_id=existing.id).delete()
-        db.session.delete(existing)
+        existing.password_hash = bcrypt.generate_password_hash("password").decode("utf-8")
+        existing.email = "admin@example.com"
         db.session.commit()
-        print("Cleared existing data.")
-
-    password_hash = bcrypt.generate_password_hash("password").decode("utf-8")
-    user = User(username="admin", email="admin@example.com", password_hash=password_hash)
-    db.session.add(user)
-    db.session.flush()
+        print("Cleared existing workout/max data (templates preserved).")
+        user = existing
+    else:
+        password_hash = bcrypt.generate_password_hash("password").decode("utf-8")
+        user = User(username="admin", email="admin@example.com", password_hash=password_hash)
+        db.session.add(user)
+        db.session.flush()
 
     for w in WORKOUTS:
         workout = Workout(

@@ -8,7 +8,15 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    unit = db.Column(db.String(5), nullable=False, default="lb")
+    timezone = db.Column(db.String(60), nullable=False, default="UTC")
     workouts = db.relationship("Workout", backref="user", lazy=True)
 
     def to_dict(self):
-        return {"id": self.id, "username": self.username, "email": self.email}
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "unit": self.unit or "lb",
+            "timezone": self.timezone or "UTC",
+        }

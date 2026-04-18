@@ -1,237 +1,179 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard – WorkoutLog</title>
-  <link rel="stylesheet" href="/static/css/main.css" />
-</head>
-<body class="app-page">
+{% extends '_base.html' %}
 
-  <nav class="navbar">
-    <span class="nav-logo">WorkoutLog</span>
-    <div class="nav-links">
-      <a href="/dashboard" class="nav-link active">Dashboard</a>
-      <a href="/workouts" class="nav-link">Workouts</a>
-      <a href="/templates" class="nav-link">Templates</a>
-      <a href="/maxes" class="nav-link">Maxes</a>
+{% block title %}Home – WorkoutLog{% endblock %}
+
+{% block content %}
+<main class="container home-container">
+
+  {# ── Date header ──────────────────────────────────────── #}
+  <div class="home-date">
+    <span class="home-weekday" id="home-weekday" aria-hidden="true"></span>
+    <time class="home-day" id="home-day"></time>
+  </div>
+
+  {# ── Last session ─────────────────────────────────────── #}
+  <section class="home-section" aria-label="Last session">
+    <span class="home-section-label">Last Session</span>
+    <div id="last-session-slot">
+      <div class="home-skeleton" aria-hidden="true"></div>
     </div>
-    <div class="nav-right">
-      <span id="nav-username"></span>
-      <button class="btn btn-ghost unit-toggle" title="Switch weight units">lbs</button>
-      <button id="logout-btn" class="btn btn-ghost">Logout</button>
+  </section>
+
+  {# ── Quick start ──────────────────────────────────────── #}
+  <section class="home-section" aria-label="Quick start templates">
+    <span class="home-section-label">Quick Start</span>
+    <div class="template-rail" id="template-rail" role="list">
+      <div class="home-skeleton home-skeleton-rail" aria-hidden="true"></div>
     </div>
-  </nav>
+  </section>
 
-  <main class="container">
+  {# ── Minimal stats strip ──────────────────────────────── #}
+  <div class="stats-strip" id="stats-strip" aria-label="Training summary">
+    <span class="stats-strip-item">
+      <span class="stats-strip-value" id="stat-week">—</span>
+      <span class="stats-strip-label">This week</span>
+    </span>
+    <span class="stats-strip-divider" aria-hidden="true"></span>
+    <span class="stats-strip-item">
+      <span class="stats-strip-value" id="stat-total">—</span>
+      <span class="stats-strip-label">Total</span>
+    </span>
+  </div>
 
-    <div class="stats-grid" id="stats-grid">
-      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Total Workouts</div></div>
-      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Hours Trained</div></div>
-      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">This Week</div></div>
-      <div class="stat-card"><div class="stat-value">—</div><div class="stat-label">Day Streak</div></div>
-    </div>
+</main>
 
-    <div class="dashboard-grid">
+{# ── Sticky primary CTA — above bottom nav ────────────── #}
+<div class="start-workout-bar" role="complementary" aria-label="Start workout">
+  <a href="/log" class="btn-start" aria-label="Start a new workout">
+    Start Workout
+  </a>
+</div>
+{% endblock %}
 
-      <div class="dash-card">
-        <h3 class="dash-card-title">Best Recorded Lifts</h3>
-        <div id="pr-content"><p class="text-muted" style="padding:.5rem 0">Loading...</p></div>
-      </div>
+{% block scripts %}
+<script>
+  (function () {
 
-      <div class="dash-card">
-        <h3 class="dash-card-title">Most Logged Exercises</h3>
-        <div id="top-exercises-content"><p class="text-muted" style="padding:.5rem 0">Loading...</p></div>
-      </div>
+    /* ── Date header ─────────────────────────────────────── */
+    (function renderDate() {
+      const now = new Date();
+      const weekday = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+      const day = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+      document.getElementById('home-weekday').textContent = weekday;
+      const timeEl = document.getElementById('home-day');
+      timeEl.textContent = day;
+      timeEl.setAttribute('datetime', now.toISOString().slice(0, 10));
+    })();
 
-    </div>
+    /* ── Relative date ───────────────────────────────────── */
+    function relativeDate(isoString) {
+      const d = new Date(isoString);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diff = Math.floor((today - d) / 86400000);
+      if (diff === 0) return 'Today';
+      if (diff === 1) return 'Yesterday';
+      if (diff < 7) return diff + ' days ago';
+      if (diff < 14) return '1 week ago';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
 
-    <div class="dash-card" style="margin-top:1rem">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
-        <h3 class="dash-card-title" style="margin-bottom:0">Personal Maxes</h3>
-        <button class="btn btn-ghost btn-sm" id="show-add-max-btn">+ Add Max</button>
-      </div>
-      <div id="add-max-form" class="add-max-form hidden">
-        <div class="autocomplete-wrapper">
-          <input id="max-exercise-input" type="text" placeholder="Exercise name..." autocomplete="off" />
-          <ul class="autocomplete-list hidden" id="max-exercise-suggestions"></ul>
-        </div>
-        <input id="max-weight-input" type="number" min="0" step="2.5" placeholder="weight" />
-        <button type="button" class="btn btn-primary btn-sm" id="save-new-max-btn">Save</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="cancel-add-max-btn">Cancel</button>
-      </div>
-      <div id="maxes-list-content"><p class="text-muted" style="padding:.5rem 0">Loading...</p></div>
-    </div>
-
-    <div class="dash-card" style="margin-top:1rem">
-      <h3 class="dash-card-title">Activity — Last 12 Weeks</h3>
-      <div class="activity-heatmap" id="activity-heatmap"></div>
-      <div class="activity-legend">
-        <span class="legend-label">Less</span>
-        <div class="activity-cell activity-0"></div>
-        <div class="activity-cell activity-1"></div>
-        <div class="activity-cell activity-2"></div>
-        <div class="activity-cell activity-3"></div>
-        <span class="legend-label">More</span>
-      </div>
-    </div>
-
-  </main>
-
-  <script src="/static/js/main.js"></script>
-  <script>
-    if (!localStorage.getItem("token")) window.location.href = "/login";
-    document.getElementById("nav-username").textContent = localStorage.getItem("username") || "";
-    document.getElementById("logout-btn").addEventListener("click", () => {
-      localStorage.clear();
-      window.location.href = "/login";
-    });
-
-    // ── Exercise list for max autocomplete ─────────────────
-    const EXERCISE_LIST = [
-      "Bench Press","Bent Over Row","Bicep Curl","Calf Raise","Clean and Jerk",
-      "Deadlift","Front Squat","Goblet Squat","Hack Squat","Hammer Curl",
-      "Hip Thrust","Incline Bench Press","Lat Pulldown","Leg Curl","Leg Extension",
-      "Leg Press","Lunge","Overhead Press","Pec Deck","Power Clean","Power Snatch",
-      "Pull-up","Push-up","Romanian Deadlift","Seated Cable Row","Seated Dumbbell Press",
-      "Single Arm Dumbbell Row","Skull Crusher","Snatch","Squat","Sumo Deadlift",
-      "T-Bar Row","Trap Bar Deadlift","Tricep Dip","Tricep Pushdown",
-    ].sort((a, b) => a.localeCompare(b));
-
-    let personalMaxes = [];
-
-    async function loadDashboard() {
-      let data;
-      try { data = await api("/api/stats"); } catch (err) {
-        document.getElementById("stats-grid").innerHTML =
-          `<p class="empty-state error" style="grid-column:1/-1">${err.message}</p>`;
+    /* ── Last session ────────────────────────────────────── */
+    async function loadLastSession() {
+      const slot = document.getElementById('last-session-slot');
+      let workouts;
+      try {
+        workouts = await api('/api/workouts/?page=1&limit=1');
+      } catch (_) {
+        slot.innerHTML = '<p class="home-empty">No sessions recorded yet.</p>';
         return;
       }
 
-      const hours = (data.total_minutes / 60).toFixed(1);
-      document.getElementById("stats-grid").innerHTML = `
-        <div class="stat-card"><div class="stat-value">${data.total_workouts}</div><div class="stat-label">Total Workouts</div></div>
-        <div class="stat-card"><div class="stat-value">${hours}</div><div class="stat-label">Hours Trained</div></div>
-        <div class="stat-card"><div class="stat-value">${data.this_week}</div><div class="stat-label">This Week</div></div>
-        <div class="stat-card"><div class="stat-value">${data.current_streak}</div><div class="stat-label">Day Streak</div></div>
-      `;
-
-      const prEl = document.getElementById("pr-content");
-      if (!data.personal_records.length) {
-        prEl.innerHTML = '<p class="text-muted" style="padding:.75rem 0">No weight data yet.</p>';
-      } else {
-        prEl.innerHTML = `
-          <table class="pr-table">
-            <thead><tr><th>Exercise</th><th>Best Weight</th><th>Sets × Reps</th></tr></thead>
-            <tbody>${data.personal_records.map(pr => `
-              <tr>
-                <td>${escapeHtml(pr.name)}</td>
-                <td class="pr-weight">${displayWeight(pr.weight_lb)}</td>
-                <td class="pr-sets">${pr.sets ? pr.sets + ' × ' + (pr.reps || '?') : '—'}</td>
-              </tr>`).join("")}
-            </tbody>
-          </table>`;
-      }
-
-      const topEl = document.getElementById("top-exercises-content");
-      if (!data.top_exercises.length) {
-        topEl.innerHTML = '<p class="text-muted" style="padding:.75rem 0">No exercises logged yet.</p>';
-      } else {
-        const max = data.top_exercises[0].count;
-        topEl.innerHTML = `<div class="exercise-bars">${data.top_exercises.map(ex => `
-          <div class="exercise-bar-row">
-            <span class="exercise-bar-label" title="${escapeHtml(ex.name)}">${escapeHtml(ex.name)}</span>
-            <div class="exercise-bar-track"><div class="exercise-bar-fill" style="width:${(ex.count/max*100).toFixed(1)}%"></div></div>
-            <span class="exercise-bar-count">${ex.count}</span>
-          </div>`).join("")}</div>`;
-      }
-
-      const heatmap = document.getElementById("activity-heatmap");
-      const activity = data.daily_activity;
-      const firstDate = new Date(activity[0].date + "T12:00:00");
-      for (let i = 0; i < firstDate.getDay(); i++) {
-        const cell = document.createElement("div");
-        cell.className = "activity-cell activity-empty";
-        heatmap.appendChild(cell);
-      }
-      activity.forEach(d => {
-        const cell = document.createElement("div");
-        const level = d.count === 0 ? 0 : d.count === 1 ? 1 : d.count === 2 ? 2 : 3;
-        cell.className = `activity-cell activity-${level}`;
-        cell.title = `${d.date}: ${d.count} workout${d.count !== 1 ? "s" : ""}`;
-        heatmap.appendChild(cell);
-      });
-    }
-
-    // ── Personal Maxes management ──────────────────────────
-    async function loadMaxesList() {
-      personalMaxes = await api("/api/maxes/");
-      renderMaxesList();
-    }
-
-    function renderMaxesList() {
-      const el = document.getElementById("maxes-list-content");
-      if (!personalMaxes.length) {
-        el.innerHTML = '<p class="text-muted" style="padding:.5rem 0">No maxes set yet. Add one above or use "Save as Max" when logging exercises.</p>';
+      const list = Array.isArray(workouts) ? workouts : (workouts.workouts || []);
+      if (!list.length) {
+        slot.innerHTML = '<p class="home-empty">No sessions recorded yet.</p>';
         return;
       }
-      el.innerHTML = `<div class="maxes-list">${personalMaxes.map(m => `
-        <div class="max-row" data-id="${m.id}">
-          <span class="max-row-name">${escapeHtml(m.exercise_name)}</span>
-          <div class="max-row-right">
-            <span class="max-row-weight">${displayWeight(m.weight_lb)}</span>
-            <button class="btn-icon delete-max-btn" data-id="${m.id}" title="Delete">&times;</button>
+
+      const w = list[0];
+      let exercises = [];
+      try {
+        exercises = await api('/api/workouts/' + w.id + '/exercises');
+      } catch (_) {}
+
+      const dateStr = relativeDate(w.date);
+      const exerciseRows = exercises.slice(0, 3).map(ex => {
+        const sets = (ex.sets || []);
+        const topSet = sets.reduce((best, s) =>
+          (s.weight_lb || 0) > (best.weight_lb || 0) ? s : best,
+          sets[0] || {}
+        );
+        const weightDisplay = topSet && topSet.weight_lb
+          ? displayWeight(topSet.weight_lb)
+          : null;
+        const setsDisplay = topSet && topSet.reps
+          ? (topSet.reps + ' reps')
+          : '';
+        return `
+          <div class="ex-row">
+            <span class="ex-name">${escapeHtml(ex.name)}</span>
+            <span class="ex-meta">${weightDisplay ? escapeHtml(weightDisplay) + (setsDisplay ? ' · ' + setsDisplay : '') : setsDisplay}</span>
+          </div>`;
+      }).join('');
+
+      const moreCount = exercises.length > 3 ? exercises.length - 3 : 0;
+
+      slot.innerHTML = `
+        <a href="/session/${w.id}" class="last-session-card" aria-label="View ${escapeHtml(w.title)} session">
+          <div class="last-session-header">
+            <span class="last-session-title">${escapeHtml(w.title)}</span>
+            <span class="last-session-date">${dateStr}</span>
           </div>
-        </div>`).join("")}</div>`;
-      document.querySelectorAll(".delete-max-btn").forEach(btn =>
-        btn.addEventListener("click", async () => {
-          await api(`/api/maxes/${btn.dataset.id}`, "DELETE");
-          await loadMaxesList();
-        })
-      );
+          ${exerciseRows ? `<div class="last-session-divider" aria-hidden="true"></div>
+          <div class="last-session-exercises">${exerciseRows}</div>` : ''}
+          ${moreCount ? `<p class="last-session-more">+${moreCount} more</p>` : ''}
+        </a>`;
     }
 
-    // Add max form
-    document.getElementById("show-add-max-btn").addEventListener("click", () => {
-      document.getElementById("add-max-form").classList.remove("hidden");
-      document.getElementById("show-add-max-btn").classList.add("hidden");
-    });
-    document.getElementById("cancel-add-max-btn").addEventListener("click", () => {
-      document.getElementById("add-max-form").classList.add("hidden");
-      document.getElementById("show-add-max-btn").classList.remove("hidden");
-    });
-    document.getElementById("save-new-max-btn").addEventListener("click", async () => {
-      const name = document.getElementById("max-exercise-input").value.trim();
-      const weight = parseFloat(document.getElementById("max-weight-input").value);
-      if (!name || !weight) return;
-      await api("/api/maxes/", "POST", { exercise_name: name, weight_lb: fromInputWeight(weight) || weight });
-      document.getElementById("max-exercise-input").value = "";
-      document.getElementById("max-weight-input").value = "";
-      document.getElementById("add-max-form").classList.add("hidden");
-      document.getElementById("show-add-max-btn").classList.remove("hidden");
-      await loadMaxesList();
+    /* ── Templates quick start ───────────────────────────── */
+    async function loadTemplates() {
+      const rail = document.getElementById('template-rail');
+      let templates;
+      try {
+        templates = await api('/api/templates/');
+      } catch (_) {
+        rail.innerHTML = '<span class="home-empty">No templates yet.</span>';
+        return;
+      }
+
+      if (!templates.length) {
+        rail.innerHTML = `
+          <a href="/templates" class="template-chip" role="listitem">Create a template</a>`;
+        return;
+      }
+
+      rail.innerHTML = templates.slice(0, 6).map(t => `
+        <a href="/log?template=${t.id}" class="template-chip" role="listitem" aria-label="Start ${escapeHtml(t.name)}">${escapeHtml(t.name)}</a>
+      `).join('') + `
+        <a href="/log" class="template-chip template-chip-new" role="listitem" aria-label="New workout">+ New</a>`;
+    }
+
+    /* ── Stats strip ─────────────────────────────────────── */
+    async function loadStats() {
+      let data;
+      try { data = await api('/api/stats'); } catch (_) { return; }
+      document.getElementById('stat-week').textContent = data.this_week ?? '—';
+      document.getElementById('stat-total').textContent = data.total_workouts ?? '—';
+    }
+
+    /* ── Fire all in parallel ────────────────────────────── */
+    initUnitToggle(() => {
+      loadLastSession();
+      loadStats();
     });
 
-    // Autocomplete for add-max form
-    const maxAcInput = document.getElementById("max-exercise-input");
-    const maxAcList = document.getElementById("max-exercise-suggestions");
+    Promise.all([loadLastSession(), loadTemplates(), loadStats()]);
 
-    maxAcInput.addEventListener("input", () => {
-      const q = maxAcInput.value.trim().toLowerCase();
-      if (!q) { maxAcList.classList.add("hidden"); maxAcList.innerHTML = ""; return; }
-      const matches = EXERCISE_LIST.filter(n => n.toLowerCase().includes(q)).slice(0, 8);
-      if (!matches.length) { maxAcList.classList.add("hidden"); maxAcList.innerHTML = ""; return; }
-      maxAcList.innerHTML = matches.map(n => `<li class="autocomplete-item" data-value="${escapeHtml(n)}">${escapeHtml(n)}</li>`).join("");
-      maxAcList.classList.remove("hidden");
-      maxAcList.querySelectorAll(".autocomplete-item").forEach(li => {
-        li.addEventListener("mousedown", e => { e.preventDefault(); maxAcInput.value = li.dataset.value; maxAcList.classList.add("hidden"); maxAcList.innerHTML = ""; });
-      });
-    });
-    maxAcInput.addEventListener("blur", () => setTimeout(() => { maxAcList.classList.add("hidden"); }, 150));
-
-    initUnitToggle(() => { loadDashboard(); loadMaxesList(); });
-    loadDashboard();
-    loadMaxesList();
-  </script>
-</body>
-</html>
+  })();
+</script>
+{% endblock %}
