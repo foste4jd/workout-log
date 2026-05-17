@@ -1,7 +1,5 @@
-from datetime import datetime, timezone
 from backend.db.database import db
 from backend.models.program import Program, ProgramDay
-from backend.models.workout_template import WorkoutTemplate
 
 
 def get_programs(user_id):
@@ -23,7 +21,6 @@ def create_program(user_id, data):
         name=data["name"],
         description=data.get("description"),
         total_weeks=data.get("total_weeks", 4),
-        start_date=_parse_date(data.get("start_date")),
     )
     db.session.add(program)
     db.session.flush()
@@ -33,35 +30,30 @@ def create_program(user_id, data):
 
 
 def update_program(program, data):
+    from backend.models.program import ProgramRun
+    if "days" in data or "total_weeks" in data:
+        active = ProgramRun.query.filter_by(
+            program_id=program.id, status="active"
+        ).first()
+        if active:
+            return None, "Cannot edit a program with an active run. Cancel the run first."
+
     program.name = data.get("name", program.name)
     program.description = data.get("description", program.description)
     program.total_weeks = data.get("total_weeks", program.total_weeks)
-    if "start_date" in data:
-        program.start_date = _parse_date(data["start_date"])
     if "days" in data:
         for day in list(program.days):
             db.session.delete(day)
         db.session.flush()
         _replace_days(program, data["days"])
     db.session.commit()
-    return program
+    return program, None
 
 
 def delete_program(program):
     db.session.delete(program)
     db.session.commit()
 
-
-def start_program_day(program, day_id, user_id, date=None):
-    """Start a specific program day by creating a session from its template."""
-    from backend.services import template_service
-    day = ProgramDay.query.filter_by(id=day_id, program_id=program.id).first()
-    if not day or not day.template_id:
-        return None
-    template = WorkoutTemplate.query.filter_by(id=day.template_id, user_id=user_id).first()
-    if not template:
-        return None
-    return template_service.create_session_from_template(template, user_id, date)
 
 
 def _replace_days(program, days_data):
@@ -75,10 +67,3 @@ def _replace_days(program, days_data):
         ))
 
 
-def _parse_date(date_str):
-    if not date_str:
-        return None
-    try:
-        return datetime.fromisoformat(date_str)
-    except (ValueError, TypeError):
-        return None

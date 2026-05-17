@@ -476,7 +476,7 @@ workout-log/
 
 **Unit toggle**: `lbs ↔ kg` toggle. `initUnitToggle(onChangeCallback)` in `main.js` handles rendering; on toggle it calls `PATCH /api/users/me` to persist server-side. On login, `data.user.unit` is written to `localStorage`. Session page injects `{{ unit }}` into `localStorage` via a `<script>` tag before `main.js` loads. All weight display uses `displayWeight()` / `toDisplayWeight()` and all weight input uses `fromInputWeight()`.
 
-**CSS architecture**: All styles in `frontend/static/css/main.css`. Uses CSS custom properties (design tokens) defined in `:root`. Key tokens: `--accent`, `--bg`, `--surface`, `--surface-2`, `--surface-3`, `--card-bg`, `--border`, `--text`, `--text-2`, `--text-muted`, `--radius` (8px), `--radius-lg` (12px), `--bn-height` (60px). Global `border-radius` is 8px — tighter and more disciplined than the previous 12px.
+**CSS architecture**: All styles in `frontend/static/css/main.css`. Uses CSS custom properties (design tokens) defined in `:root`. Key tokens: `--accent`, `--bg`, `--surface`, `--surface-2`, `--surface-3`, `--border`, `--border-strong`, `--rule`, `--text`, `--text-2`, `--text-muted`, `--radius` (8px), `--radius-lg` (12px), `--bn-height` (60px), `--font-display`, `--font-body`. Motion tokens: `--dur-fast` (120ms), `--dur` (180ms), `--dur-slow` (260ms), `--ease`, `--ease-out`. Global `border-radius` is 8px.
 
 **Modal system**: All modals use an opacity/pointer-events toggle — **not** `display:none`. To open: add `.open` class. To close: remove `.open`. Never toggle `.hidden` on overlays. Use `openModal(id)` / `closeModal(id)` and `openSheet(id)` / `closeSheet(id)` helpers from `main.js`. Background click to close is wired by `openModal` automatically.
 
@@ -595,11 +595,14 @@ workout-log/
 
 Full design context lives in `.impeccable.md` at the project root. Always read that file before doing UI work. Summary below.
 
+### Brand Identity
+A complete brand identity handoff was received and applied (2026-05-03). The source files live at `~/Downloads/design_handoff_barpath_identity/` — `README.md` is the spec, `design_files/colors_and_type.css` is the canonical token file, `assets/barpath_stencil_b.svg` is the icon mark.
+
 ### Target Audience
 Serious athletes, coaches, and gym-goers — many accustomed to paper training logs, not necessarily tech-savvy. Must work one-handed in a gym under harsh lighting. Also used by coaches reviewing athlete data at a desk.
 
 ### Brand Personality
-**Focused, exact, disciplined.** The physical analog is a quality training journal — structured, purposeful, nothing decorative that doesn't serve the record.
+**Disciplined, warm, industrial — gym-chalk and iron.** The physical analog is a programming sheet and equipment-grade documentation. Not Silicon Valley fitness; not glossy gradient bro-tech.
 
 ### References
 - **Linear** — precision tool, dark, fast, zero decoration
@@ -609,31 +612,109 @@ Serious athletes, coaches, and gym-goers — many accustomed to paper training l
 MyFitnessPal (noisy, consumer-y), Strong app (rough), Apple Fitness (lifestyle marketing). No motivational language, no achievement badges, no emoji.
 
 ### Theme
-**Dark.** Gym use, glare, chalk hands. Color system uses OKLCH throughout — all neutrals tinted toward hue 232 (cool steel) for subconscious cohesion.
+**Dark (Iron) by default.** Gym use, glare, chalk hands. Color system uses OKLCH throughout — all neutrals tinted toward **hue 60 (warm iron/forge)**, not cool steel/blue.
+
+### Logo & Marks
+
+**Icon mark — The Stencil B**: Capital B in Big Shoulders Display Black (weight 900), with two horizontal stencil cuts sliced through it (plate-edge slots). Construction grid: 320 × 320 units. Cut 1: y=118→132 (14u). Cut 2: y=208→222 (14u). SVG uses `fill="currentColor"` + `mask`. Pre-built SVG at `assets/barpath_stencil_b.svg`. Each inline use must have a **unique `mask id`** (e.g. `bp-cuts-nav`, `bp-cuts-log`) to avoid SVG mask collisions across pages.
+
+**Wordmark**: "BARPATH" as live HTML text — Big Shoulders Display 900, `letter-spacing: 0.02em`, `text-transform: uppercase`. Never use the old path-drawn SVG wordmark.
+
+**Size rules**:
+- Navbar: mark at 28px + wordmark at 1rem
+- Hero / auth: mark at 40–72px + wordmark at clamp or fixed size
+- Below 16px: drop cuts, use solid B
+
+**Do not**: rotate, stretch, outline, gradient-fill, or drop-shadow the mark. Ember is never used as the Stencil B fill.
 
 ### Typography
-| Role | Font | Weight |
+
+| Tier | Family | Weight | Size | Line-height | Tracking | Case |
+|---|---|---|---|---|---|---|
+| Display | Big Shoulders Display | 900 | 96px | 0.88 | +0.005em | UPPER |
+| H1 | Big Shoulders Display | 800 | 56px | 0.92 | +0.005em | UPPER |
+| H2 | Big Shoulders Display | 800 | 36px | 0.95 | +0.01em | UPPER |
+| H3 | Big Shoulders Display | 700 | 22px | 1.05 | +0.02em | UPPER |
+| Eyebrow | Big Shoulders Display | 900 | 12px | 1 | +0.28em | UPPER — always Ember |
+| Body | IBM Plex Mono | 400 | 16px | 1.55 | −0.005em | sentence |
+| Meta | IBM Plex Mono | 500 | 13px | 1.5 | 0 | sentence |
+| Data | IBM Plex Mono | 600 | 14px | 1.4 | +0.02em | UPPER — often Ember |
+
+Google Fonts import:
+```
+https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap
+```
+
+**Important**: `colors_and_type.css` in the handoff bundle ships `--bp-font-body: 'Hanken Grotesk'` — this is a known error in that file. The correct body font is IBM Plex Mono. The app's `main.css` uses the correct value.
+
+CSS classes: `.eyebrow` is defined in `main.css`. Use it for all section labels, card eyebrows, and categorical labels (currently `.home-section-label`, `.wh-label`, `.acct-section-title`, `.dash-card-title` are candidates for migration).
+
+### Color System
+
+**OKLCH is the source of truth.** Three primaries, two signals.
+
+| Name | OKLCH (dark) | Role |
 |---|---|---|
-| Headings, wordmark, CTAs | Barlow Semi Condensed | 700–800 |
-| Body, inputs, data, labels | Hanken Grotesk | 400–600 |
+| Iron | `oklch(8% 0.005 60)` | Default surface / page bg |
+| Bone | `oklch(95% 0.010 85)` | Primary text on dark |
+| Ember | `oklch(70% 0.175 42)` | The single accent — CTAs, rules, highlights |
+| PR Green | `oklch(72% 0.19 142)` | Personal record / success (product UI only) |
+| Heavy Red | `oklch(50% 0.22 22)` | Overload / failure / destructive (product UI only) |
 
-Both loaded via Google Fonts. Pages that use this system import both in `<head>`.
+**Surface ramp (dark/Iron):**
+```
+--bg:           oklch(8%  0.005 60)   /* page background */
+--surface:      oklch(12% 0.006 60)   /* card / panel */
+--surface-2:    oklch(16% 0.007 60)   /* input / inset */
+--surface-3:    oklch(20% 0.008 60)   /* pressed / hover */
+--border:       oklch(28% 0.010 60)   /* hairline */
+--border-strong:oklch(32% 0.010 60)   /* emphasized hairline */
+--rule:         oklch(14% 0.006 60)   /* paper-ruled bg line */
+```
 
-### Color Tokens (OKLCH)
+**Text:**
 ```
---bg:           oklch(7% 0.013 232)    /* deep near-black, cool steel tint */
---surface:      oklch(11% 0.015 232)
---surface-2:    oklch(14% 0.016 232)
---surface-3:    oklch(17% 0.016 232)
---border:       oklch(20% 0.017 232)
---text:         oklch(93% 0.006 232)   /* off-white, cool tint */
---text-2:       oklch(72% 0.010 232)   /* secondary text */
---text-muted:   oklch(47% 0.014 232)
---accent:       oklch(58% 0.12 232)    /* restrained steel blue — NOT electric */
---success:      oklch(62% 0.16 145)
---danger:       oklch(58% 0.21 14)
+--text:         oklch(95% 0.010 85)   /* primary, warm bone */
+--text-2:       oklch(74% 0.010 75)   /* secondary */
+--text-muted:   oklch(48% 0.012 70)   /* tertiary */
 ```
-All pages are now fully migrated to OKLCH tokens. The old hex palette (`#08111E`, `#4090FF`) has been fully replaced. All `rgba()` color usage has been replaced with OKLCH equivalents.
+
+**Accent (Ember):**
+```
+--accent:       oklch(70% 0.175 42)
+--accent-hover: oklch(65% 0.175 42)
+--accent-dim:   oklch(70% 0.175 42 / .12)
+--accent-dim-2: oklch(70% 0.175 42 / .22)
+--on-accent:    oklch(14% 0.020 40)   /* Iron on Ember */
+```
+
+**Signals (product UI only — never marketing):**
+```
+--success / --pr:  oklch(62% 0.17 145) / oklch(72% 0.19 142)
+--danger / --heavy:oklch(58% 0.20 14)  / oklch(50% 0.22 22)
+```
+
+**Set-type badge colors:**
+```
+--set-warmup:  oklch(76% 0.13 85)    /* wheat */
+--set-working: oklch(72% 0.16 148)   /* olive-green */
+--set-amrap:   oklch(70% 0.175 42)   /* ember */
+--set-emom:    oklch(60% 0.16 20)    /* terracotta */
+--set-failure: oklch(56% 0.20 18)    /* oxblood */
+```
+
+**Color rules:**
+- Ember is the **only** accent. No other accent colors.
+- Never use Ember as the Stencil B fill (mark fill is always Bone on Iron, or Iron on Bone).
+- Iron hue is 60 — warm charcoal. Never drift to neutral grey or blue.
+- PR Green / Heavy Red never appear in marketing — product UI only.
+
+### Motion Tokens
+```
+--dur-fast: 120ms   --ease:     cubic-bezier(.22, .68, 0, 1.08)
+--dur:      180ms   --ease-out: cubic-bezier(.22, 1, .36, 1)
+--dur-slow: 260ms
+```
 
 ### Design Principles
 1. **Friction is the enemy.** Mid-workout interactions must be one gesture.
@@ -649,16 +730,24 @@ All pages are now fully migrated to OKLCH tokens. The old hex palette (`#08111E`
 - No generic card grids (icon + heading + text, repeated)
 - No centered layout by default — left-aligned feels more designed
 
-### Pages Upgraded to New Design System
-All pages are on the new design system. The migration from hex tokens + Inter to OKLCH + Barlow SC/Hanken Grotesk is complete globally via `_base.html` and `main.css`.
+### CSS Architecture Notes
+- All design tokens in `frontend/static/css/main.css` `:root` block, unprefixed (`--accent`, `--bg`, etc.). The handoff bundle uses `--bp-` prefix — when porting new tokens from the bundle, drop the prefix and add to `:root`.
+- Token rename to `--bp-` prefix is a future task (tracked in ROADMAP Phase 7 #35).
+- `login.html`, `log.html`, and `session.html` are standalone pages with inline `<style>` blocks — font imports and any token overrides must be kept in sync manually with `main.css`.
 
-| Page | Status | Notes |
+### Pages — Logo & Font Status
+All 9 navbar surfaces now use the Stencil B + BARPATH wordmark consistently.
+
+| Page | Navbar source | Status |
 |---|---|---|
-| `login.html` | ✅ Done | Full-bleed dark, ruled-line bg texture, no floating card |
-| `dashboard.html` | ✅ Done | Extends `_base.html`; migrated to shared template system |
-| `workouts.html` | ✅ Done | Modal system migrated from `.hidden` to `.open` toggle |
-| `session.html` | ✅ Done | Micro-interactions: check-done animation, press states, set edit sheet |
-| All other pages | ✅ Done | Font + OKLCH tokens applied via `_base.html` + `main.css` |
+| `workouts.html`, `dashboard.html`, `account.html` | `_navbar.html` via `_base.html` | ✅ Stencil B + BARPATH |
+| `log.html` | Inline nav | ✅ Stencil B + BARPATH |
+| `exercise_history.html` | Inline nav | ✅ Stencil B + BARPATH |
+| `templates.html` | Inline nav | ✅ Stencil B + BARPATH |
+| `programs.html` | Inline nav | ✅ Stencil B + BARPATH |
+| `program_detail.html` | Inline nav | ✅ Stencil B + BARPATH |
+| `maxes.html` | Inline nav | ✅ Stencil B + BARPATH |
+| `ai_memory.html` | Inline nav | ✅ Stencil B + BARPATH |
 
 ---
 

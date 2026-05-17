@@ -1,7 +1,7 @@
-# Barpath — Product Roadmap
+starcl# Barpath — Product Roadmap
 
-Last updated: 2026-04-17
-Source: Full multi-perspective codebase review (security, architecture, performance, UX) — two full passes
+Last updated: 2026-05-03
+Source: Full multi-perspective codebase review (security, architecture, performance, UX) — two full passes + brand identity handoff applied
 
 ---
 
@@ -206,7 +206,7 @@ Sourced from full UI/UX audit (2026-04-16). Every page was reviewed against the 
 
 | Priority | Item | Notes |
 |---|---|---|
-| P0 | **Replace Inter with Barlow Semi Condensed + Hanken Grotesk** | All pages still load Inter. Login is the only page on the new type system. |
+| P0 | **Apply brand identity typefaces: Big Shoulders Display + IBM Plex Mono** | Barlow Semi Condensed + Hanken Grotesk were interim fonts. Brand identity handoff received 2026-05-03 — final fonts are Big Shoulders Display (display/headings) + IBM Plex Mono (body/data). All pages updated. |
 | P0 | **Migrate color tokens to OKLCH** | All pages use old hex palette (`#08111E`, `#4090FF`). OKLCH tokens defined in `.impeccable.md` and implemented on login. |
 | P0 | **Replace `alert()` / `confirm()` with inline errors + undo toasts** | `session.html` uses `alert(err.message)`; `maxes.html` uses native `confirm()`. Browser dialogs break the theme and signal "prototype." Use inline error states and a lightweight dismiss-able toast for destructive confirmations. |
 | P0 | **Replace unicode emoji action icons with SVGs** | `workouts.html` and `programs.html` use `&#9654;` `&#10697;` `&#128278;` `&#128465;` `&#9998;` as action buttons. Renders as emoji on iOS. Replace with the SVG icon pattern used everywhere else in the app. |
@@ -279,8 +279,8 @@ Sourced from full UI/UX audit (2026-04-16). Every page was reviewed against the 
 
 | # | Item | Page | Impact | Status |
 |---|---|---|---|---|
-| 1 | Apply Barlow SC + Hanken Grotesk to all pages | Global | Visual coherence | ✅ Done |
-| 2 | Migrate color tokens to OKLCH | Global | Visual coherence | ✅ Done |
+| 1 | Apply Big Shoulders Display + IBM Plex Mono to all pages | Global | Visual coherence | ✅ Done |
+| 2 | Migrate color tokens to OKLCH (warm Iron palette, hue 60) | Global | Visual coherence | ✅ Done |
 | 3 | Replace `alert()`/`confirm()` with inline errors | Global | Trust / polish | ✅ Done |
 | 4 | Replace unicode emoji icons with SVGs | Global | Polish | ✅ Done (workouts.html) |
 | 5 | Fix bottom nav "Profile" → "Stats" | Global | Navigation clarity | ✅ Done |
@@ -327,3 +327,69 @@ Sourced from full UI/UX audit (2026-04-16). Every page was reviewed against the 
 | 41 | "Repeat last workout" shortcut on log page — one tap to load previous session's exercises | Log | Planning speed (friction item F5) | `[ ]` |
 | 42 | Date quick-pills (+1 through +7 days) below the calendar popover | Log | Rapid week planning (friction item F8) | `[ ]` |
 | 43 | Bulk week planning flow — assign a template to multiple days at once from the log page | Log / Programs | Planning 5+ workouts (friction items F7, F10) | `[ ]` |
+
+### Phase 7 — Brand Identity Handoff (2026-05-03)
+
+Brand identity design system received and applied. Source files at `~/Downloads/design_handoff_barpath_identity/`.
+
+| # | Item | Status |
+|---|---|---|
+| 44 | Replace Barlow SC + Hanken Grotesk with Big Shoulders Display + IBM Plex Mono across all pages | ✅ Done |
+| 45 | Replace trajectory J-curve monogram + path-drawn SVG wordmark with Stencil B mark + live text BARPATH | ✅ Done |
+| 46 | Logo consistency — all 9 inline-nav pages updated (log, history, templates, programs, program_detail, maxes, ai_memory + shared navbar) | ✅ Done |
+| 47 | OKLCH token corrections: `--border` 24%→28%, `--text-muted` 52%→48% | ✅ Done |
+| 48 | Add missing tokens: `--rule`, `--sp-12`, `--shadow-sheet`, `--pr`/`--heavy` signals, `--set-warmup/working/amrap/emom/failure`, motion vars (`--dur-fast/dur/dur-slow/ease/ease-out`), `--font-display`/`--font-body` | ✅ Done |
+| 49 | Fix set-type badge colors: warmup (blue hue 250 → wheat hue 85), emom (purple hue 300 → terracotta hue 20) | ✅ Done |
+| 50 | Fix activity heatmap color ramp: blue (hue 232) → Ember amber (hue 42) | ✅ Done |
+| 51 | Add `.eyebrow` class (Big Shoulders 900, +0.28em, all-caps, Ember) | ✅ Done |
+| 52 | Fix calendar today badge text color: stale blue `oklch(97% 0.005 232)` → `var(--on-accent)` | ✅ Done |
+| 53 | Add h1/h2/h3 base line-height rules (0.92 / 0.95 / 1.05) + tracking matching spec | ✅ Done |
+| 54 | Migrate `.home-section-label`, `.wh-label`, `.dash-card-title`, `.acct-section-title` to `.eyebrow` class | `[ ]` |
+| 55 | Token rename: `--bg` → `--bp-bg` etc. (full `--bp-` prefix migration) | `[ ]` |
+| 56 | Light mode: port `[data-theme="light"]` Bone surface ramp from handoff bundle | `[ ]` |
+| 57 | Favicon: generate Iron tile at 16/32/180/512px with cut-thickening rules; wire `<link rel="icon">` | `[ ]` |
+| 58 | PWA manifest: 192px + 512px Iron tile PNGs, `manifest.json` | `[ ]` |
+
+---
+
+## Phase 8 — Programs Revamp
+
+The current Programs feature is functional but minimal: a list of programs, a weekly schedule editor, and a "Start" button per day. It doesn't yet feel like a first-class feature. This phase elevates it to match the quality of the session and log experiences.
+
+**Phase 8 Core — COMPLETED 2026-05-03**
+
+### 8a — Core UX
+
+| # | Item | Notes | Status |
+|---|---|---|---|
+| 1 | **Active program concept + run lifecycle** | `ProgramRun` model: start program with date + weekday picker, generates all planned workouts, cancel removes unstarted ones. Active badge on program card. | `[x]` |
+| 2 | **Auto-advance to next session** | After completing a session linked to a program day, offer "Start next session →" as the post-complete CTA. | `[ ]` |
+| 3 | **Program progress indicator on session page** | Program name + week shown in session header meta via `program_run_id` FK on `Workout`. | `[x]` |
+| 4 | **Program detail view revamp** | Redesigned with active run banner, per-day scheduled dates, status badges (Planned/Done/Upcoming), Start/View buttons, edit locked during active run. | `[x]` |
+| 5 | **Full-page program builder** | Current create/edit still uses modal. Move to full-page route `/programs/new` in a future pass. | `[ ]` |
+
+### 8b — Data Model Extensions
+
+| # | Item | Notes | Status |
+|---|---|---|---|
+| 6 | **`ProgramRun` model** | New table: program_id, user_id, start_date, training_days (JSON), status (active/completed/cancelled). One active run per user enforced in service. | `[x]` |
+| 7 | **`program_run_id` + `program_day_id` FKs on `Workout`** | Both nullable, SET NULL on delete. Migration `e5f6a7b8c9d0` applied. | `[x]` |
+| 8 | **Day status derived from `Workout.status`** | Workout status (planned/completed) shown as badge in program detail — no separate field on `ProgramDay` needed. | `[x]` |
+| 9 | **Duplicate program** | `POST /api/programs/<id>/duplicate` — deep copies blueprint + all days. | `[x]` |
+
+### 8c — AI Integration
+
+| # | Item | Notes | Status |
+|---|---|---|---|
+| 10 | **AI program generation** | `POST /api/ai/generate-program` — user prompt → full program structure. | `[ ]` |
+| 11 | **Inline load recommendations on session page** | When set has `%` value in active program, surface computed weight in edit sheet. | `[ ]` |
+| 12 | **Program adherence in AI context** | Pass active program name + current week to `build_context()`. | `[ ]` |
+
+### 8d — Quality of Life
+
+| # | Item | Notes | Status |
+|---|---|---|---|
+| 13 | **Skipped day logging** | Mark a program day as skipped with optional reason. | `[ ]` |
+| 14 | **Program week notes** | Optional notes per week (e.g. "deload"). | `[ ]` |
+| 15 | **Template → Program shortcut** | "Add to Program" from templates list. | `[ ]` |
+| 16 | **Active program widget in navbar** | Strip below navbar showing program name + current week. Auto-populates via `initActiveProgramWidget()` on `_base.html` pages. | `[x]` |
