@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Log Workout – Barpath</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/css/main.css" />
   <style>
     /* ── Date quick-select pills ──────────────────────────────── */
@@ -38,7 +41,7 @@
       margin-bottom: 1.5rem;
     }
     .nl-bar-label {
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: .68rem;
       font-weight: 700;
       letter-spacing: .09em;
@@ -108,7 +111,7 @@
       padding: .18rem 0;
     }
     .nl-preview-exname {
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: .95rem;
       font-weight: 700;
       letter-spacing: .01em;
@@ -145,7 +148,7 @@
       margin-top: .6rem;
     }
     .nl-load-btn {
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: .8rem;
       font-weight: 700;
       letter-spacing: .04em;
@@ -173,7 +176,7 @@
     .nl-conf-tag {
       margin-left: auto;
       font-size: .68rem;
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-weight: 700;
       letter-spacing: .05em;
       color: var(--text-muted);
@@ -269,7 +272,7 @@
     .log-meta-chip input,
     .log-meta-chip textarea { color: var(--text); }
     .log-meta-chip input::placeholder,
-    .log-meta-chip textarea::placeholder { color: oklch(54% 0.012 232); }
+    .log-meta-chip textarea::placeholder { color: oklch(54% 0.012 70); }
     .log-meta-chip svg { opacity: .8; }
 
     /* ── Date chip trigger ────────────────────────────────── */
@@ -321,7 +324,7 @@
       margin-bottom: .6rem;
     }
     .cal-month-label {
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: .85rem;
       font-weight: 700;
       letter-spacing: .10em;
@@ -358,7 +361,7 @@
     }
     .cal-day-names span {
       text-align: center;
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: .65rem;
       font-weight: 600;
       letter-spacing: .09em;
@@ -383,7 +386,7 @@
       background: none;
       border: none;
       border-radius: var(--radius-sm);
-      font-family: 'Hanken Grotesk', sans-serif;
+      font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
       font-size: .82rem;
       font-weight: 500;
       color: var(--text);
@@ -420,17 +423,52 @@
     }
     .cal-day.selected:hover { background: var(--accent-hover); }
     /* Keep dot visible on selected+today using near-white */
-    .cal-day.selected.today::after { background: oklch(93% 0.006 232 / .6); }
+    .cal-day.selected.today::after { background: oklch(93% 0.006 85 / .6); }
+
+    /* Planned-workout indicator dot — top-right corner of day cell */
+    .cal-day.has-planned::before {
+      content: '';
+      position: absolute;
+      top: 5px; right: 5px;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .cal-day.has-planned.selected::before { background: oklch(14% 0.020 40); }
+
+    /* ── Scheduled-workout banner (shown below date row) ─── */
+    .dwb {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      background: var(--accent-dim);
+      border-radius: var(--radius);
+      padding: .65rem 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .dwb.hidden { display: none !important; }
+    .dwb-icon { color: var(--accent); flex-shrink: 0; line-height: 0; opacity: .85; }
+    .dwb-body { flex: 1; min-width: 0; }
+    .dwb-label { font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .1rem; }
+    .dwb-name  { font-size: .875rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dwb-link  { font-size: .75rem; font-weight: 700; letter-spacing: .04em; color: var(--accent); text-decoration: none; white-space: nowrap; flex-shrink: 0; padding: .3rem .65rem; background: var(--accent-dim-2); border-radius: var(--radius-sm); transition: background .12s; }
+    .dwb-link:hover { background: oklch(70% 0.175 42 / .32); }
   </style>
 </head>
 <body class="app-page">
 
   <nav class="navbar">
-    <span class="nav-logo">Barpath</span>
+    <a href="/workouts" class="nav-logo" aria-label="Barpath" style="display:flex;align-items:center;gap:8px;">
+      <svg viewBox="0 0 320 320" width="28" height="28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0;">
+        <defs><mask id="bp-cuts-log"><rect width="320" height="320" fill="#fff"/><rect x="0" y="118" width="320" height="14" fill="#000"/><rect x="0" y="208" width="320" height="14" fill="#000"/></mask></defs>
+        <text x="160" y="300" text-anchor="middle" font-family="'Big Shoulders Display', sans-serif" font-weight="900" font-size="320" fill="currentColor" mask="url(#bp-cuts-log)">B</text>
+      </svg>
+      <span style="font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:1rem;letter-spacing:0.06em;text-transform:uppercase;line-height:1;">BARPATH</span>
+    </a>
     <div class="nav-right">
       <span id="nav-username" style="display:none"></span>
       <button class="btn btn-ghost unit-toggle" title="Switch weight units">lbs</button>
-      <button id="logout-btn" class="btn-logout" title="Sign out">
+      <button id="logout-btn" class="btn-logout" title="Sign out" aria-label="Sign out">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
     </div>
@@ -464,6 +502,18 @@
       <button class="date-quick-btn" data-offset="-1">Yesterday</button>
       <button class="date-quick-btn" data-offset="0">Today</button>
       <button class="date-quick-btn" data-offset="1">Tomorrow</button>
+    </div>
+
+    <!-- Scheduled workout banner — shown when selected date already has a planned workout -->
+    <div class="dwb hidden" id="date-workout-banner" role="status" aria-live="polite">
+      <span class="dwb-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </span>
+      <div class="dwb-body">
+        <div class="dwb-label">Already scheduled for this day</div>
+        <div class="dwb-name" id="dwb-name"></div>
+      </div>
+      <a href="#" class="dwb-link" id="dwb-link">View →</a>
     </div>
 
     <!-- Natural language workout interpreter -->
@@ -632,12 +682,14 @@
       btn.addEventListener("click", () => {
         const d = new Date();
         d.setDate(d.getDate() + parseInt(btn.dataset.offset));
-        document.getElementById("log-date").value = d.toISOString().slice(0, 10);
+        const iso = d.toISOString().slice(0, 10);
+        document.getElementById("log-date").value = iso;
         syncDateChipLabel();
         if (_titleIsAuto && !_titleHasAi) {
           document.getElementById("log-title").value = defaultTitle();
         }
         updateModeUI();
+        updateDateBanner(iso);
       });
     });
 
@@ -1068,6 +1120,15 @@
         document.getElementById("log-title").focus();
         return;
       }
+      const namedExercises = exercises.filter(e => e.name.trim());
+      if (!namedExercises.length) {
+        errorEl.textContent = isPlanMode()
+          ? "Add at least one exercise before scheduling."
+          : "Add at least one exercise before saving.";
+        errorEl.classList.remove("hidden");
+        document.getElementById("add-exercise-btn").focus();
+        return;
+      }
       errorEl.classList.add("hidden");
 
       try {
@@ -1290,17 +1351,22 @@
 
     // ── Init ──────────────────────────────────────────────────────
     initUnitToggle(() => renderBuilder());
-    loadMaxes().then(() => {
+    loadMaxes().then(async () => {
       exercises.push(newExercise());
       renderBuilder();
       syncDateChipLabel();
-      // Default title to the selected date if user hasn't typed anything
       if (!document.getElementById("log-title").value) {
         document.getElementById("log-title").value = defaultTitle();
       } else {
         _titleIsAuto = false;
       }
       updateModeUI();
+
+      // Pre-fetch workouts for the current month so the banner and calendar dots work immediately
+      const initDate = document.getElementById("log-date").value || todayStr;
+      const initD    = new Date(initDate + "T12:00:00");
+      await fetchMonthWorkouts(initD.getFullYear(), initD.getMonth());
+      updateDateBanner(initDate);
     });
 
     // ── AI Workout Builder ────────────────────────────────────────
@@ -1516,6 +1582,45 @@
       }
     }
 
+    // ── Scheduled workout awareness ───────────────────────────────
+    const scheduledWorkouts = new Map(); // dateStr → [{id, title, status}]
+    const _fetchedMonths    = new Set();
+
+    async function fetchMonthWorkouts(y, m) {
+      const key = `${y}-${m}`;
+      if (_fetchedMonths.has(key)) return;
+      _fetchedMonths.add(key);
+      const pad = n => String(n).padStart(2, "0");
+      const from    = `${y}-${pad(m + 1)}-01`;
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      const to      = `${y}-${pad(m + 1)}-${pad(lastDay)}`;
+      try {
+        const workouts = await api(`/api/workouts/?date_from=${from}&date_to=${to}&limit=100`);
+        workouts.forEach(w => {
+          const d = (w.date || "").slice(0, 10);
+          if (!d) return;
+          if (!scheduledWorkouts.has(d)) scheduledWorkouts.set(d, []);
+          scheduledWorkouts.get(d).push(w);
+        });
+      } catch (_) {}
+    }
+
+    function updateDateBanner(iso) {
+      const banner  = document.getElementById("date-workout-banner");
+      const nameEl  = document.getElementById("dwb-name");
+      const linkEl  = document.getElementById("dwb-link");
+      if (!banner) return;
+      const planned = (scheduledWorkouts.get(iso) || []).filter(w => w.status === "planned");
+      if (planned.length) {
+        const w = planned[0];
+        nameEl.textContent = w.title;
+        linkEl.href        = `/session/${w.id}`;
+        banner.classList.remove("hidden");
+      } else {
+        banner.classList.add("hidden");
+      }
+    }
+
     // ── Custom calendar ───────────────────────────────────────────
     ;(function initCalendar() {
       const popover   = document.getElementById("cal-popover");
@@ -1558,11 +1663,13 @@
           cells.push({ d: cells.length - firstWd - daysInMon + 1, iso: isoOf(calY, calM + 1, cells.length - firstWd - daysInMon + 1), other: true });
 
         grid.innerHTML = cells.map(({ d, iso, other }) => {
+          const hasPlanned = (scheduledWorkouts.get(iso) || []).some(w => w.status === "planned");
           const cls = [
             "cal-day",
-            other               ? "other-month" : "",
-            iso === todayISO    ? "today"        : "",
-            iso === selected    ? "selected"     : "",
+            other            ? "other-month" : "",
+            iso === todayISO ? "today"       : "",
+            iso === selected ? "selected"    : "",
+            hasPlanned       ? "has-planned" : "",
           ].filter(Boolean).join(" ");
           return `<button class="${cls}" data-date="${iso}" type="button"
             aria-label="${iso}" aria-pressed="${iso === selected}">${d}</button>`;
@@ -1589,7 +1696,7 @@
         }
       }
 
-      function openCal() {
+      async function openCal() {
         if (open) return;
         open = true;
         const val = hiddenIn.value;
@@ -1598,6 +1705,7 @@
           calY = d.getFullYear();
           calM = d.getMonth();
         }
+        await fetchMonthWorkouts(calY, calM);
         renderGrid();
         position();
         popover.classList.add("open");
@@ -1623,7 +1731,8 @@
           if (ti && typeof defaultTitle === "function") ti.value = defaultTitle();
         }
         if (typeof updateModeUI === "function") updateModeUI();
-        renderGrid(); // refresh selected state before close so no flicker
+        updateDateBanner(iso);
+        renderGrid();
         closeCal();
       }
 
@@ -1633,12 +1742,14 @@
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open ? closeCal() : openCal(); }
       });
 
-      document.getElementById("cal-prev").addEventListener("click", () => {
+      document.getElementById("cal-prev").addEventListener("click", async () => {
         if (--calM < 0) { calM = 11; calY--; }
+        await fetchMonthWorkouts(calY, calM);
         renderGrid();
       });
-      document.getElementById("cal-next").addEventListener("click", () => {
+      document.getElementById("cal-next").addEventListener("click", async () => {
         if (++calM > 11) { calM = 0; calY++; }
+        await fetchMonthWorkouts(calY, calM);
         renderGrid();
       });
 

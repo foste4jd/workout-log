@@ -40,6 +40,11 @@
       </div>
       <div class="bw-history" id="bw-history"></div>
     </div>
+
+    <div class="acct-save-row">
+      <button class="btn btn-primary btn-sm" id="save-athlete" type="button">Save</button>
+      <span class="save-error" id="save-error-athlete"></span>
+    </div>
   </section>
 
   {# ── Training Identity section ─────────────────────────── #}
@@ -80,6 +85,11 @@
         {% endfor %}
       </div>
     </div>
+
+    <div class="acct-save-row">
+      <button class="btn btn-primary btn-sm" id="save-training" type="button">Save</button>
+      <span class="save-error" id="save-error-training"></span>
+    </div>
   </section>
 
   {# ── Limitations section (collapsed by default) ────────── #}
@@ -101,6 +111,10 @@
           placeholder="e.g. No overhead pressing due to shoulder impingement, avoid heavy spinal loading"
           rows="3"></textarea>
       </div>
+      <div class="acct-save-row">
+        <button class="btn btn-primary btn-sm" id="save-limits" type="button">Save</button>
+        <span class="save-error" id="save-error-limits"></span>
+      </div>
     </div>
   </section>
 
@@ -111,64 +125,92 @@
 <script>
 (function () {
 
-  /* ── State ──────────────────────────────────────────────── */
   let unit = 'lb';
+  const freqInput = document.getElementById('freq-input');
+  const restrictionsInput = document.getElementById('restrictions-input');
 
-  /* ── Badge helper ───────────────────────────────────────── */
+  /* ── Badge flash ──────────────────────────────────────── */
   function flash(badgeId) {
     const el = document.getElementById(badgeId);
     el.classList.add('visible');
     clearTimeout(el._t);
-    el._t = setTimeout(() => el.classList.remove('visible'), 1800);
+    el._t = setTimeout(() => el.classList.remove('visible'), 2000);
   }
 
-  /* ── API save (profile fields) ──────────────────────────── */
-  async function saveField(key, value, badgeId) {
-    try {
-      await api('/api/profile', 'PUT', { [key]: value });
-      flash(badgeId);
-    } catch (e) {
-      console.error('Profile save failed', e);
+  /* ── Save button helper ───────────────────────────────── */
+  function setSaving(btn, saving) {
+    btn.disabled = saving;
+    if (saving) {
+      btn.textContent = 'Saving…';
+      btn.classList.remove('saved');
     }
   }
 
-  /* ── Chips: instant save on selection ───────────────────── */
-  function wireChips(name, badgeId) {
-    document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
-      radio.addEventListener('change', () => {
-        saveField(name, radio.value, badgeId);
-      });
-    });
+  function setSaved(btn) {
+    btn.disabled = false;
+    btn.textContent = 'Saved ✓';
+    btn.classList.add('saved');
+    clearTimeout(btn._savedTimer);
+    btn._savedTimer = setTimeout(() => {
+      btn.textContent = 'Save';
+      btn.classList.remove('saved');
+    }, 2200);
   }
 
-  wireChips('experience_level',        'badge-athlete');
-  wireChips('primary_goal',            'badge-training');
-  wireChips('preferred_intensity_style','badge-training');
+  function showError(errId, msg) {
+    const el = document.getElementById(errId);
+    el.textContent = msg;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.textContent = ''; }, 4000);
+  }
 
-  /* ── Frequency: debounced save on input ─────────────────── */
-  const freqInput = document.getElementById('freq-input');
-  let freqTimer;
-  freqInput.addEventListener('input', () => {
-    clearTimeout(freqTimer);
-    freqTimer = setTimeout(() => {
-      const v = freqInput.value ? parseInt(freqInput.value, 10) : null;
-      if (v === null || (v >= 1 && v <= 7)) {
-        saveField('training_frequency_target', v, 'badge-training');
-      }
-    }, 900);
+  /* ── Athlete Profile save ─────────────────────────────── */
+  document.getElementById('save-athlete').addEventListener('click', async function () {
+    const expRadio = document.querySelector('input[name=experience_level]:checked');
+    const payload = {};
+    if (expRadio) payload.experience_level = expRadio.value;
+    setSaving(this, true);
+    try {
+      await api('/api/profile', 'PUT', payload);
+      setSaved(this);
+    } catch (e) {
+      setSaving(this, false);
+      showError('save-error-athlete', e.message || 'Save failed');
+    }
   });
 
-  /* ── Movement restrictions: debounced save ──────────────── */
-  const restrictionsInput = document.getElementById('restrictions-input');
-  let restrictTimer;
-  restrictionsInput.addEventListener('input', () => {
-    clearTimeout(restrictTimer);
-    restrictTimer = setTimeout(() => {
-      saveField('movement_restrictions', restrictionsInput.value, 'badge-limits');
-    }, 1200);
+  /* ── Training Identity save ───────────────────────────── */
+  document.getElementById('save-training').addEventListener('click', async function () {
+    const goalRadio = document.querySelector('input[name=primary_goal]:checked');
+    const intRadio  = document.querySelector('input[name=preferred_intensity_style]:checked');
+    const freqVal   = freqInput.value ? parseInt(freqInput.value, 10) : null;
+    const payload   = {};
+    if (goalRadio) payload.primary_goal = goalRadio.value;
+    if (intRadio)  payload.preferred_intensity_style = intRadio.value;
+    if (freqVal !== null && freqVal >= 1 && freqVal <= 7) payload.training_frequency_target = freqVal;
+    setSaving(this, true);
+    try {
+      await api('/api/profile', 'PUT', payload);
+      setSaved(this);
+    } catch (e) {
+      setSaving(this, false);
+      showError('save-error-training', e.message || 'Save failed');
+    }
   });
 
-  /* ── Bodyweight logging ──────────────────────────────────── */
+  /* ── Limitations save ─────────────────────────────────── */
+  document.getElementById('save-limits').addEventListener('click', async function () {
+    setSaving(this, true);
+    try {
+      await api('/api/profile', 'PUT', { movement_restrictions: restrictionsInput.value });
+      setSaved(this);
+    } catch (e) {
+      setSaving(this, false);
+      showError('save-error-limits', e.message || 'Save failed');
+    }
+  });
+
+  /* ── Bodyweight logging ───────────────────────────────── */
   function localDateStr() {
     const d = new Date();
     return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
@@ -176,10 +218,7 @@
 
   function renderBwHistory(entries) {
     const el = document.getElementById('bw-history');
-    if (!entries.length) {
-      el.innerHTML = '<p class="bw-empty">No entries yet.</p>';
-      return;
-    }
+    if (!entries.length) { el.innerHTML = '<p class="bw-empty">No entries yet.</p>'; return; }
     el.innerHTML = entries.map(e => {
       const dateStr = new Date(e.recorded_date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       return `<div class="bw-entry">
@@ -203,7 +242,7 @@
     }
   });
 
-  /* ── Limitations toggle ─────────────────────────────────── */
+  /* ── Limitations toggle ───────────────────────────────── */
   const toggle = document.getElementById('limits-toggle');
   const body   = document.getElementById('limits-body');
   toggle.addEventListener('click', () => {
@@ -212,36 +251,32 @@
     body.hidden = expanded;
   });
 
-  /* ── Load initial data ──────────────────────────────────── */
+  /* ── Load initial data ────────────────────────────────── */
   async function load() {
     try {
       const data = await api('/api/profile');
       unit = data.unit || 'lb';
       document.getElementById('bw-unit-label').textContent = unit;
-
       const p = data.profile || {};
 
       if (p.experience_level) {
-        const radio = document.querySelector(`input[name=experience_level][value="${p.experience_level}"]`);
-        if (radio) radio.checked = true;
+        const r = document.querySelector(`input[name=experience_level][value="${p.experience_level}"]`);
+        if (r) r.checked = true;
       }
       if (p.primary_goal) {
-        const radio = document.querySelector(`input[name=primary_goal][value="${p.primary_goal}"]`);
-        if (radio) radio.checked = true;
+        const r = document.querySelector(`input[name=primary_goal][value="${p.primary_goal}"]`);
+        if (r) r.checked = true;
       }
       if (p.preferred_intensity_style) {
-        const radio = document.querySelector(`input[name=preferred_intensity_style][value="${p.preferred_intensity_style}"]`);
-        if (radio) radio.checked = true;
+        const r = document.querySelector(`input[name=preferred_intensity_style][value="${p.preferred_intensity_style}"]`);
+        if (r) r.checked = true;
       }
-      if (p.training_frequency_target) {
-        freqInput.value = p.training_frequency_target;
-      }
+      if (p.training_frequency_target) freqInput.value = p.training_frequency_target;
       if (p.movement_restrictions) {
         restrictionsInput.value = p.movement_restrictions;
         toggle.setAttribute('aria-expanded', 'true');
         body.hidden = false;
       }
-
       renderBwHistory(data.recent_bodyweight || []);
     } catch (e) {
       console.error('Profile load failed', e);

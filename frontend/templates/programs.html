@@ -4,37 +4,78 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Programs – Barpath</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/css/main.css" />
   <style>
     .program-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 1rem 1.1rem;
-      margin-bottom: .75rem;
-      cursor: pointer;
+      margin-bottom: .6rem;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: .75rem;
       transition: border-color .15s;
     }
-    .program-card:hover { border-color: var(--accent); }
-    .program-card-info { flex: 1; min-width: 0; }
-    .program-card-name { font-weight: 700; font-size: 1rem; margin-bottom: .15rem; }
-    .program-card-meta { font-size: .8rem; color: var(--text-muted); }
-    .program-card-desc { font-size: .82rem; color: var(--text-secondary); margin-top: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .program-card-actions { display: flex; gap: .4rem; flex-shrink: 0; }
-    .pg-empty { color: var(--text-muted); padding: 3rem 0; }
+    .program-card:hover { border-color: var(--border-strong); }
+    .program-card.active-program { border-color: var(--accent); }
+    .program-card-body { flex: 1; min-width: 0; cursor: pointer; }
+    .program-card-name {
+      font-family: 'Big Shoulders Display', sans-serif;
+      font-weight: 700; font-size: 1.1rem; letter-spacing: .01em; margin-bottom: .15rem;
+    }
+    .program-card-meta { font-size: .78rem; color: var(--text-muted); }
+    .program-card-desc {
+      font-size: .8rem; color: var(--text-2); margin-top: .3rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .program-active-badge {
+      display: inline-flex; align-items: center; gap: .35rem;
+      font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+      color: var(--accent); background: var(--accent-dim);
+      border-radius: 4px; padding: .2rem .5rem; margin-top: .4rem;
+    }
+    .program-active-badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    }
+    .program-card-actions { display: flex; gap: .3rem; flex-shrink: 0; padding-top: .15rem; }
+    .pg-empty { color: var(--text-muted); padding: 3rem 0; text-align: center; }
+
+    /* Days-per-week field — only shown on create */
+    .create-only { display: block; }
+    .create-only.hidden { display: none; }
+
+    .dpw-pills { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .dpw-pill {
+      width: 2.75rem; height: 2.75rem; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--surface-2);
+      color: var(--text-2); font-size: .8rem; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .12s, border-color .12s, color .12s;
+    }
+    .dpw-pill.selected {
+      background: var(--accent); border-color: var(--accent); color: var(--bg);
+    }
+    .dpw-hint { font-size: .72rem; color: var(--text-muted); margin-top: .4rem; line-height: 1.4; }
   </style>
 </head>
 <body class="app-page">
 
   <nav class="navbar">
-    <span class="nav-logo">Barpath</span>
+    <a href="/workouts" class="nav-logo" aria-label="Barpath" style="display:flex;align-items:center;gap:8px;">
+      <svg viewBox="0 0 320 320" width="28" height="28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0;">
+        <defs><mask id="bp-cuts-progs"><rect width="320" height="320" fill="#fff"/><rect x="0" y="118" width="320" height="14" fill="#000"/><rect x="0" y="208" width="320" height="14" fill="#000"/></mask></defs>
+        <text x="160" y="300" text-anchor="middle" font-family="'Big Shoulders Display', sans-serif" font-weight="900" font-size="320" fill="currentColor" mask="url(#bp-cuts-progs)">B</text>
+      </svg>
+      <span style="font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:1rem;letter-spacing:0.06em;text-transform:uppercase;line-height:1;">BARPATH</span>
+    </a>
     <div class="nav-right">
       <span id="nav-username" style="display:none"></span>
-      <button id="logout-btn" class="btn-logout" title="Sign out">
+      <button id="logout-btn" class="btn-logout" title="Sign out" aria-label="Sign out">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
     </div>
@@ -43,17 +84,17 @@
   <main class="container" style="padding-bottom:6rem">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
       <h2 style="margin:0;font-size:1.1rem">My Programs</h2>
-      <button class="btn btn-primary btn-sm" id="new-program-btn">+ New Program</button>
+      <button class="btn btn-primary btn-sm" id="new-program-btn">+ New</button>
     </div>
     <div id="programs-list"></div>
   </main>
 
   <!-- Create / Edit modal -->
-  <div id="program-modal-overlay" class="modal-overlay hidden">
+  <div id="program-modal-overlay" class="modal-overlay">
     <div class="modal modal-sm">
       <div class="modal-header">
         <h3 id="pm-title">New Program</h3>
-        <button class="btn-icon" id="close-pm-btn">&times;</button>
+        <button class="btn-icon" id="close-pm-btn" aria-label="Close">&times;</button>
       </div>
       <form id="program-form">
         <input type="hidden" id="pm-id" />
@@ -65,6 +106,19 @@
           <label for="pm-weeks">Total weeks</label>
           <input id="pm-weeks" type="number" min="1" max="52" value="4" />
         </div>
+        <div class="form-group create-only" id="pm-days-row">
+          <label>Days per week</label>
+          <div class="dpw-pills" id="dpw-pills">
+            <button type="button" class="dpw-pill" data-n="1">1</button>
+            <button type="button" class="dpw-pill" data-n="2">2</button>
+            <button type="button" class="dpw-pill selected" data-n="3">3</button>
+            <button type="button" class="dpw-pill" data-n="4">4</button>
+            <button type="button" class="dpw-pill" data-n="5">5</button>
+            <button type="button" class="dpw-pill" data-n="6">6</button>
+            <button type="button" class="dpw-pill" data-n="7">7</button>
+          </div>
+          <p class="dpw-hint">Pre-fills your schedule — you can add or remove days on the next screen.</p>
+        </div>
         <div class="form-group">
           <label for="pm-desc">Description</label>
           <textarea id="pm-desc" rows="2" placeholder="Optional notes…"></textarea>
@@ -72,14 +126,14 @@
         <p id="pm-error" class="form-error hidden"></p>
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" id="cancel-pm-btn">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="submit" class="btn btn-primary" id="pm-submit-btn">Create &amp; Set Up</button>
         </div>
       </form>
     </div>
   </div>
 
   <!-- Delete confirmation -->
-  <div id="pg-delete-overlay" class="modal-overlay hidden">
+  <div id="pg-delete-overlay" class="modal-overlay">
     <div class="modal modal-sm">
       <h3>Delete program?</h3>
       <p>All days and schedule data will be lost. This can't be undone.</p>
@@ -99,49 +153,79 @@
     });
 
     let programs = [];
+    let activeRun = null;
     let deletingId = null;
 
     async function loadPrograms() {
-      programs = await api("/api/programs/") || [];
+      [programs, activeRun] = await Promise.all([
+        api("/api/programs/") || [],
+        api("/api/program-runs/active").catch(() => null),
+      ]);
       renderPrograms();
     }
 
     function renderPrograms() {
       const el = document.getElementById("programs-list");
       if (!programs.length) {
-        el.innerHTML = '<div class="pg-empty">No programs yet. Create one to plan your training cycle.</div>';
+        el.innerHTML = '<div class="pg-empty">No programs yet.<br>Create one to plan your training cycle.</div>';
         return;
       }
+
       el.innerHTML = programs.map(p => {
         const dayCount = (p.days || []).length;
-        const startStr = p.start_date
-          ? new Date(p.start_date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-          : "No start date";
+        const isActive = activeRun && activeRun.program_id === p.id;
+        const weeksLabel = `${p.total_weeks} wk`;
+        const daysLabel = dayCount ? `${dayCount} day${dayCount !== 1 ? "s" : ""}` : "No days yet";
+
+        let activeBadge = "";
+        if (isActive) {
+          const wk = activeRun.current_week || 1;
+          activeBadge = `<div class="program-active-badge">Week ${wk} of ${p.total_weeks} · Active</div>`;
+        }
+
         return `
-          <div class="program-card" data-id="${p.id}">
-            <div class="program-card-info" onclick="window.location.href='/programs/${p.id}'">
+          <div class="program-card${isActive ? " active-program" : ""}" data-id="${p.id}">
+            <div class="program-card-body" onclick="window.location.href='/programs/${p.id}'">
               <div class="program-card-name">${escapeHtml(p.name)}</div>
-              <div class="program-card-meta">${p.total_weeks} week${p.total_weeks !== 1 ? "s" : ""} · ${dayCount} day${dayCount !== 1 ? "s" : ""} · ${startStr}</div>
+              <div class="program-card-meta">${weeksLabel} · ${daysLabel}</div>
               ${p.description ? `<div class="program-card-desc">${escapeHtml(p.description)}</div>` : ""}
+              ${activeBadge}
             </div>
             <div class="program-card-actions">
-              <button class="btn-icon edit-pg-btn" data-id="${p.id}" title="Edit">&#9998;</button>
-              <button class="btn-icon delete-pg-btn" data-id="${p.id}" title="Delete">&#128465;</button>
+              <button class="btn-icon dup-btn" data-id="${p.id}" onclick="event.stopPropagation()" title="Duplicate" aria-label="Duplicate program">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+              <button class="btn-icon edit-pg-btn" data-id="${p.id}" onclick="event.stopPropagation()" title="Edit" aria-label="Edit program">&#9998;</button>
+              <button class="btn-icon delete-pg-btn" data-id="${p.id}" onclick="event.stopPropagation()" title="Delete" aria-label="Delete program">&#128465;</button>
             </div>
           </div>`;
       }).join("");
 
-      el.querySelectorAll(".edit-pg-btn").forEach(btn =>
-        btn.addEventListener("click", (e) => { e.stopPropagation(); openProgramModal(parseInt(btn.dataset.id)); })
+      // Duplicate
+      document.querySelectorAll(".dup-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = parseInt(btn.dataset.id);
+          try {
+            const copy = await api(`/api/programs/${id}/duplicate`, "POST");
+            programs.push(copy);
+            renderPrograms();
+          } catch { alert("Failed to duplicate program."); }
+        });
+      });
+
+      document.querySelectorAll(".edit-pg-btn").forEach(btn =>
+        btn.addEventListener("click", () => openProgramModal(parseInt(btn.dataset.id)))
       );
-      el.querySelectorAll(".delete-pg-btn").forEach(btn =>
-        btn.addEventListener("click", (e) => { e.stopPropagation(); openDeleteModal(parseInt(btn.dataset.id)); })
+      document.querySelectorAll(".delete-pg-btn").forEach(btn =>
+        btn.addEventListener("click", () => openDeleteModal(parseInt(btn.dataset.id)))
       );
     }
 
+    // ── Create/Edit modal ────────────────────────────────────────
     function openProgramModal(id) {
-      const modal = document.getElementById("program-modal-overlay");
       const errEl = document.getElementById("pm-error");
+      const daysRow = document.getElementById("pm-days-row");
+      const submitBtn = document.getElementById("pm-submit-btn");
       errEl.classList.add("hidden");
       if (id) {
         const p = programs.find(x => x.id === id);
@@ -150,18 +234,42 @@
         document.getElementById("pm-name").value = p.name;
         document.getElementById("pm-weeks").value = p.total_weeks;
         document.getElementById("pm-desc").value = p.description || "";
+        daysRow.classList.add("hidden");
+        submitBtn.textContent = "Save";
       } else {
         document.getElementById("pm-title").textContent = "New Program";
         document.getElementById("pm-id").value = "";
         document.getElementById("pm-name").value = "";
         document.getElementById("pm-weeks").value = "4";
+        setSelectedDpw(3);
         document.getElementById("pm-desc").value = "";
+        daysRow.classList.remove("hidden");
+        submitBtn.innerHTML = "Create &amp; Set Up";
       }
-      modal.classList.remove("hidden");
+      openModal("program-modal-overlay");
     }
 
     function closeProgramModal() {
-      document.getElementById("program-modal-overlay").classList.add("hidden");
+      closeModal("program-modal-overlay");
+    }
+
+    // Pill picker
+    document.getElementById("dpw-pills").addEventListener("click", e => {
+      const pill = e.target.closest(".dpw-pill");
+      if (!pill) return;
+      document.querySelectorAll(".dpw-pill").forEach(p => p.classList.remove("selected"));
+      pill.classList.add("selected");
+    });
+
+    function getSelectedDpw() {
+      const sel = document.querySelector(".dpw-pill.selected");
+      return sel ? parseInt(sel.dataset.n) : 3;
+    }
+
+    function setSelectedDpw(n) {
+      document.querySelectorAll(".dpw-pill").forEach(p => {
+        p.classList.toggle("selected", parseInt(p.dataset.n) === n);
+      });
     }
 
     document.getElementById("new-program-btn").addEventListener("click", () => openProgramModal(null));
@@ -175,40 +283,58 @@
       const name = document.getElementById("pm-name").value.trim();
       if (!name) { errEl.textContent = "Name is required."; errEl.classList.remove("hidden"); return; }
       errEl.classList.add("hidden");
+
+      const totalWeeks = parseInt(document.getElementById("pm-weeks").value) || 4;
       const payload = {
         name,
-        total_weeks: parseInt(document.getElementById("pm-weeks").value) || 4,
+        total_weeks: totalWeeks,
         description: document.getElementById("pm-desc").value.trim() || null,
       };
+
+      // On create: pre-generate placeholder days and redirect to detail
+      if (!id) {
+        const daysPerWeek = getSelectedDpw();
+        const days = [];
+        for (let w = 1; w <= totalWeeks; w++) {
+          for (let d = 1; d <= daysPerWeek; d++) {
+            days.push({ week_number: w, day_order: d, label: null, template_id: null });
+          }
+        }
+        payload.days = days;
+      }
+
       try {
         if (id) {
           const updated = await api(`/api/programs/${id}`, "PUT", payload);
           programs = programs.map(p => p.id === parseInt(id) ? updated : p);
+          closeProgramModal();
+          renderPrograms();
         } else {
           const created = await api("/api/programs/", "POST", payload);
-          programs.unshift(created);
+          // Go straight to the detail page to assign templates
+          window.location.href = `/programs/${created.id}?setup=1`;
         }
-        closeProgramModal();
-        renderPrograms();
-      } catch {
-        errEl.textContent = "Failed to save program.";
+      } catch (err) {
+        errEl.textContent = err.message || "Failed to save program.";
         errEl.classList.remove("hidden");
       }
     });
 
+    // ── Delete modal ─────────────────────────────────────────────
     function openDeleteModal(id) {
       deletingId = id;
-      document.getElementById("pg-delete-overlay").classList.remove("hidden");
+      openModal("pg-delete-overlay");
     }
-    document.getElementById("cancel-pgdel-btn").addEventListener("click", () => {
-      document.getElementById("pg-delete-overlay").classList.add("hidden");
-    });
+    document.getElementById("cancel-pgdel-btn").addEventListener("click", () => closeModal("pg-delete-overlay"));
     document.getElementById("confirm-pgdel-btn").addEventListener("click", async () => {
       if (!deletingId) return;
-      await api(`/api/programs/${deletingId}`, "DELETE");
-      programs = programs.filter(p => p.id !== deletingId);
-      document.getElementById("pg-delete-overlay").classList.add("hidden");
-      renderPrograms();
+      try {
+        await api(`/api/programs/${deletingId}`, "DELETE");
+        programs = programs.filter(p => p.id !== deletingId);
+        if (activeRun && activeRun.program_id === deletingId) activeRun = null;
+        closeModal("pg-delete-overlay");
+        renderPrograms();
+      } catch { alert("Failed to delete program."); }
     });
 
     loadPrograms();

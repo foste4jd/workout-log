@@ -4,74 +4,233 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Program – Barpath</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/css/main.css" />
   <style>
     /* ── View mode ──────────────────────────────────────────── */
-    .pd-week { margin-bottom:1.5rem; }
+    .pd-week { margin-bottom: 1.5rem; }
     .pd-week-header {
-      font-size:.78rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:.06em; color:var(--text-muted);
-      margin-bottom:.5rem; padding-bottom:.3rem; border-bottom:1px solid var(--border);
+      font-size: .78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted);
+      margin-bottom: .5rem; padding-bottom: .3rem; border-bottom: 1px solid var(--border);
     }
     .pd-day-card {
-      background:var(--surface); border:1px solid var(--border); border-radius:10px;
-      padding:.75rem 1rem; margin-bottom:.5rem;
-      display:flex; justify-content:space-between; align-items:center; gap:.75rem;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: .75rem 1rem; margin-bottom: .45rem;
+      display: flex; justify-content: space-between; align-items: center; gap: .75rem;
     }
-    .pd-day-info { flex:1; min-width:0; }
-    .pd-day-label { font-weight:600; font-size:.9rem; }
-    .pd-day-template { font-size:.8rem; color:var(--text-muted); margin-top:.15rem; }
-    .pd-day-rest { font-style:italic; color:var(--text-muted); font-size:.85rem; }
-    .pd-empty { text-align:center; color:var(--text-muted); padding:2rem 0; font-size:.9rem; }
-    .pd-meta { font-size:.82rem; color:var(--text-muted); margin-bottom:1rem; }
-    .pd-header-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:.3rem; }
+    .pd-day-card.today-card { border-color: var(--accent); }
+    .pd-day-info { flex: 1; min-width: 0; }
+    .pd-day-label { font-weight: 600; font-size: .9rem; }
+    .pd-day-template { font-size: .78rem; color: var(--text-muted); margin-top: .1rem; }
+    .pd-day-date { font-size: .72rem; color: var(--text-muted); margin-top: .1rem; }
+    .pd-day-rest { font-style: italic; color: var(--text-muted); font-size: .85rem; }
+    .pd-status-badge {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+      padding: .2rem .45rem; border-radius: 4px; flex-shrink: 0;
+    }
+    .pd-status-planned { background: var(--surface-2); color: var(--text-muted); }
+    .pd-status-completed { background: oklch(40% 0.12 145 / .15); color: oklch(68% 0.14 145); }
+    .pd-empty { text-align: center; color: var(--text-muted); padding: 2rem 0; font-size: .9rem; }
+    .pd-meta { font-size: .82rem; color: var(--text-muted); margin-bottom: 1rem; }
+    .pd-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: .3rem; }
+
+    /* ── Active run banner ──────────────────────────────────── */
+    .run-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--accent-dim); border: 1px solid var(--accent);
+      border-radius: 8px; padding: .6rem .9rem; margin-bottom: 1rem; gap: .75rem;
+    }
+    .run-banner-label {
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--accent); margin-bottom: .15rem;
+    }
+    .run-banner-detail { font-size: .8rem; color: var(--text-2); }
+
+    /* ── Start form (shown when no active run) ──────────────── */
+    .start-section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.1rem; margin-bottom: 1.25rem;
+    }
+    .start-section-title {
+      font-family: 'Big Shoulders Display', sans-serif;
+      font-weight: 700; font-size: 1rem; letter-spacing: .02em; margin-bottom: .9rem;
+    }
+    .weekday-picker { display: flex; gap: .35rem; flex-wrap: wrap; margin-bottom: .75rem; }
+    .wd-pill {
+      width: 2.75rem; height: 2.75rem; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--surface-2);
+      color: var(--text-muted); font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color .1s, background .1s, color .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .wd-pill.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+    .start-preview {
+      font-size: .78rem; color: var(--text-muted); margin-bottom: .85rem; min-height: 1.2em;
+    }
+    .start-section-actions { display: flex; gap: .5rem; }
+    .start-section-actions .btn { flex: 1; }
 
     /* ── Edit mode ──────────────────────────────────────────── */
     .edit-banner {
-      background:var(--accent); color:#fff; font-size:.8rem; font-weight:600;
-      text-align:center; padding:.35rem; margin-bottom:1rem; border-radius:6px;
+      background: var(--accent); color: var(--on-accent); font-size: .8rem; font-weight: 600;
+      text-align: center; padding: .35rem; margin-bottom: 1rem; border-radius: 6px;
     }
-    .ed-week { margin-bottom:1.25rem; }
+    .ed-week { margin-bottom: 1.25rem; }
     .ed-week-header {
-      display:flex; align-items:center; justify-content:space-between;
-      font-size:.78rem; font-weight:700; text-transform:uppercase;
-      letter-spacing:.06em; color:var(--text-muted);
-      margin-bottom:.5rem; padding-bottom:.3rem; border-bottom:1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: .78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted);
+      margin-bottom: .5rem; padding-bottom: .3rem; border-bottom: 1px solid var(--border);
     }
     .ed-day-row {
-      background:var(--surface); border:1px solid var(--border); border-radius:10px;
-      padding:.6rem .75rem; margin-bottom:.4rem;
-      display:grid; grid-template-columns:1fr 1fr auto; gap:.5rem; align-items:center;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: .65rem .75rem; margin-bottom: .4rem;
     }
-    .ed-day-row input[type=text], .ed-day-row select {
-      padding:.35rem .5rem; border:1px solid var(--border); border-radius:6px;
-      background:var(--bg); color:var(--text-primary); font-size:.85rem; width:100%;
+    .ed-day-top {
+      display: grid; grid-template-columns: 1fr auto; gap: .5rem; align-items: center;
+      margin-bottom: .45rem;
     }
+    .ed-day-top input[type=text] {
+      padding: .35rem .5rem; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--bg); color: var(--text); font-family: inherit; font-size: .85rem; width: 100%;
+    }
+    .ed-workout-btn {
+      width: 100%; text-align: left; padding: .4rem .6rem;
+      background: var(--surface-2); border: 1px dashed var(--border-strong);
+      border-radius: 7px; cursor: pointer; font-family: inherit; font-size: .82rem;
+      color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;
+      transition: border-color .12s, color .12s;
+    }
+    .ed-workout-btn.has-workout { border-style: solid; color: var(--text-2); }
+    .ed-workout-btn .ed-workout-name { font-weight: 500; }
+    .ed-workout-btn .ed-workout-chevron { opacity: .5; font-size: .75rem; }
     .ed-add-day-btn {
-      font-size:.8rem; color:var(--accent); background:none; border:1px dashed var(--accent);
-      border-radius:8px; padding:.35rem .75rem; cursor:pointer; width:100%; margin-top:.25rem;
+      font-size: .8rem; color: var(--accent); background: none; border: 1px dashed var(--accent);
+      border-radius: 8px; padding: .35rem .75rem; cursor: pointer; width: 100%; margin-top: .25rem;
     }
     .ed-add-week-btn {
-      font-size:.82rem; color:var(--accent); background:none; border:1px dashed var(--accent);
-      border-radius:8px; padding:.4rem 1rem; cursor:pointer; display:block;
-      width:100%; margin-bottom:1rem;
+      font-size: .82rem; color: var(--accent); background: none; border: 1px dashed var(--accent);
+      border-radius: 8px; padding: .4rem 1rem; cursor: pointer; display: block;
+      width: 100%; margin-bottom: 1rem;
     }
     .ed-save-row {
-      display:flex; gap:.6rem; margin-top:1rem;
-      position:sticky; bottom:calc(env(safe-area-inset-bottom,0px) + .5rem);
+      display: flex; gap: .6rem; margin-top: 1rem;
+      position: sticky; bottom: calc(env(safe-area-inset-bottom, 0px) + .5rem);
     }
-    .ed-save-row .btn { flex:1; }
-    .ed-error { color:var(--danger); font-size:.82rem; margin-top:.4rem; }
+    .ed-save-row .btn { flex: 1; }
+    .ed-error { color: var(--danger); font-size: .82rem; margin-top: .4rem; }
+    .ed-locked-banner {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: .75rem 1rem;
+      font-size: .82rem; color: var(--text-muted); text-align: center;
+    }
+
+    /* ── Day workout sheet ──────────────────────────────────── */
+    .dws-tabs {
+      display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1rem;
+    }
+    .dws-tab {
+      flex: 1; padding: .55rem; font-size: .82rem; font-weight: 600;
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color .12s, border-color .12s;
+    }
+    .dws-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .dws-tab-panel { display: none; }
+    .dws-tab-panel.active { display: block; }
+
+    /* Template pick list */
+    .tpl-pick-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .6rem .75rem; border-radius: 8px; cursor: pointer;
+      margin-bottom: .3rem; background: var(--surface-2);
+      transition: background .1s;
+    }
+    .tpl-pick-item:hover, .tpl-pick-item.selected { background: var(--accent-dim); }
+    .tpl-pick-item.selected .tpl-pick-check { opacity: 1; }
+    .tpl-pick-name { font-size: .88rem; font-weight: 500; }
+    .tpl-pick-meta { font-size: .72rem; color: var(--text-muted); margin-top: .1rem; }
+    .tpl-pick-check { opacity: 0; color: var(--accent); font-size: .9rem; flex-shrink: 0; }
+
+    /* Inline exercise builder */
+    .bld-ex-row {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: .6rem .7rem; margin-bottom: .5rem;
+    }
+    .bld-ex-name-wrap { position: relative; margin-bottom: .4rem; }
+    .bld-ex-name {
+      width: 100%; padding: .35rem .5rem; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-family: inherit; font-size: .85rem;
+    }
+    .bld-set-rows { display: flex; flex-direction: column; gap: .3rem; }
+    .bld-set-row {
+      display: grid; grid-template-columns: 1.5rem 1fr 1fr 1fr 1.5rem;
+      gap: .3rem; align-items: center;
+    }
+    .bld-set-num { font-size: .7rem; color: var(--text-muted); text-align: center; }
+    .bld-set-input {
+      padding: .3rem .4rem; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--text); font-family: inherit; font-size: .82rem;
+      text-align: center; width: 100%;
+    }
+    .bld-set-remove {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      font-size: .85rem; padding: 0; line-height: 1;
+    }
+    .bld-set-headers {
+      display: grid; grid-template-columns: 1.5rem 1fr 1fr 1fr 1.5rem;
+      gap: .3rem; font-size: .68rem; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .05em;
+      padding: 0 0 .15rem; margin-top: .15rem;
+    }
+    .bld-add-set { font-size: .75rem; color: var(--accent); background: none; border: none; cursor: pointer; padding: .2rem 0 0; }
+    .bld-ex-footer { display: flex; justify-content: space-between; align-items: center; margin-top: .3rem; }
+    .bld-remove-ex { font-size: .75rem; color: var(--danger); background: none; border: none; cursor: pointer; }
+    .bld-add-ex-btn {
+      width: 100%; font-size: .82rem; color: var(--accent); background: none;
+      border: 1px dashed var(--accent); border-radius: 8px;
+      padding: .4rem; cursor: pointer; margin-top: .25rem;
+    }
+    .bld-name-input {
+      width: 100%; padding: .4rem .55rem; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-family: inherit; font-size: .88rem; margin-bottom: .75rem;
+    }
+    .dws-done-row { display: flex; gap: .5rem; margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--border); }
+    .dws-done-row .btn { flex: 1; }
+    .bld-wt-toggle { display: flex; gap: 0; margin-bottom: .35rem; width: fit-content; }
+    .bld-wt-btn {
+      padding: .42rem .7rem; font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+      border: 1px solid var(--border-strong); background: var(--bg); color: var(--text-muted);
+      cursor: pointer; font-family: inherit; line-height: 1.5;
+      transition: background .1s, color .1s; -webkit-tap-highlight-color: transparent;
+    }
+    .bld-wt-btn:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+    .bld-wt-btn:last-child  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; }
+    .bld-wt-btn.active { background: var(--accent-dim-2); color: var(--accent); border-color: var(--accent); }
+    .bld-percent-input { border-color: var(--accent); background: var(--accent-dim); }
   </style>
 </head>
 <body class="app-page">
 
   <nav class="navbar">
-    <a href="/programs" class="btn-icon" style="margin-right:.25rem" title="Back">&#8249;</a>
-    <span class="nav-logo" id="nav-program-name">Program</span>
+    <a href="/programs" class="btn-icon" style="margin-right:.25rem" title="Back" aria-label="Back to programs">&#8249;</a>
+    <a href="/workouts" class="nav-logo" aria-label="Barpath" style="display:flex;align-items:center;gap:8px;">
+      <svg viewBox="0 0 320 320" width="28" height="28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0;">
+        <defs><mask id="bp-cuts-pdtl"><rect width="320" height="320" fill="#fff"/><rect x="0" y="118" width="320" height="14" fill="#000"/><rect x="0" y="208" width="320" height="14" fill="#000"/></mask></defs>
+        <text x="160" y="300" text-anchor="middle" font-family="'Big Shoulders Display', sans-serif" font-weight="900" font-size="320" fill="currentColor" mask="url(#bp-cuts-pdtl)">B</text>
+      </svg>
+      <span style="font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:1rem;letter-spacing:0.06em;text-transform:uppercase;line-height:1;">BARPATH</span>
+    </a>
     <div class="nav-right">
       <button id="edit-schedule-btn" class="btn btn-ghost btn-sm" style="margin-right:.25rem">Edit Schedule</button>
-      <button id="logout-btn" class="btn-logout" title="Sign out">
+      <button id="logout-btn" class="btn-logout" title="Sign out" aria-label="Sign out">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
     </div>
@@ -81,21 +240,40 @@
     <div id="pd-content"><p style="color:var(--text-muted);text-align:center;padding:3rem 0">Loading…</p></div>
   </main>
 
-  <!-- Start session modal -->
-  <div id="start-session-overlay" class="modal-overlay hidden">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3>Start Session</h3>
-        <button class="btn-icon" id="close-start-btn">&times;</button>
+  <!-- Day workout sheet -->
+  <div id="day-workout-sheet" class="sheet-overlay hidden">
+    <div class="sheet" style="max-height:85vh;overflow-y:auto;padding-bottom:2rem">
+    <div class="sheet-drag"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+        <h3 id="dws-title" style="margin:0;font-size:1rem">Configure Day</h3>
+        <button class="btn-icon" id="dws-close-btn" aria-label="Close">&times;</button>
       </div>
-      <div class="form-group">
-        <label for="start-date-input">Date</label>
-        <input type="date" id="start-date-input" />
+
+      <!-- Tabs -->
+      <div class="dws-tabs">
+        <button class="dws-tab active" data-tab="pick">Pick Template</button>
+        <button class="dws-tab" data-tab="build">Build Workout</button>
       </div>
-      <p id="start-error" class="form-error hidden"></p>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="cancel-start-btn">Cancel</button>
-        <button class="btn btn-primary" id="confirm-start-btn">Start</button>
+
+      <!-- Tab: pick existing template -->
+      <div class="dws-tab-panel active" id="dws-pick-panel">
+        <div id="dws-template-list"></div>
+        <p id="dws-no-templates" class="hidden" style="color:var(--text-muted);font-size:.82rem;text-align:center;padding:1rem 0">
+          No templates yet — use <strong>Build Workout</strong> to create one.
+        </p>
+      </div>
+
+      <!-- Tab: build custom workout -->
+      <div class="dws-tab-panel" id="dws-build-panel">
+        <input type="text" id="dws-workout-name" class="bld-name-input" placeholder="Workout name (e.g. Squat Day A)" />
+        <div id="dws-exercises-list"></div>
+        <button class="bld-add-ex-btn" id="dws-add-ex-btn">+ Add exercise</button>
+      </div>
+
+      <p class="ed-error hidden" id="dws-error"></p>
+      <div class="dws-done-row">
+        <button class="btn btn-ghost" id="dws-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="dws-done-btn">Done</button>
       </div>
     </div>
   </div>
@@ -103,28 +281,66 @@
   <script src="/static/js/main.js"></script>
   <script>
     const PROGRAM_ID = {{ program_id }};
+    const WEEKDAY_LABELS = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+
     let program = null;
     let templates = [];
-    let startingDayId = null;
     let editMode = false;
-
-    // edDays: [{weekNumber, dayOrder, label, templateId}]
+    let setupMode = false;
     let edDays = [];
+    let selectedDays = [1, 3, 5];
 
     document.getElementById("logout-btn").addEventListener("click", async () => {
       await api("/api/users/logout", "POST");
       window.location.href = "/login";
     });
 
-    // ── Load data ──────────────────────────────────────────────
     async function init() {
       [program, templates] = await Promise.all([
         api(`/api/programs/${PROGRAM_ID}`),
         api("/api/templates/"),
       ]);
-      document.getElementById("nav-program-name").textContent = program.name;
       document.title = `${program.name} – Barpath`;
-      renderView();
+      // Default weekday selection based on days-per-week
+      selectedDays = defaultTrainingDays(inferDaysPerWeek(program));
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("setup") === "1") {
+        history.replaceState(null, "", window.location.pathname);
+        setupMode = true;
+        enterEditMode();
+      } else {
+        renderView();
+      }
+    }
+
+    function inferDaysPerWeek(prog) {
+      if (!prog.days || !prog.days.length) return 3;
+      return Math.max(1, Math.round(prog.days.length / (prog.total_weeks || 1)));
+    }
+
+    function defaultTrainingDays(n) {
+      const presets = {
+        1: [1], 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5],
+        5: [1, 2, 3, 4, 5], 6: [1, 2, 3, 4, 5, 6], 7: [1, 2, 3, 4, 5, 6, 7],
+      };
+      return presets[Math.min(7, Math.max(1, n))] || [1, 3, 5];
+    }
+
+    function buildPreview(startDateStr, days) {
+      if (!days.length || !startDateStr) return "";
+      let d = new Date(startDateStr + "T12:00:00");
+      let attempts = 0;
+      while (!days.includes(d.getDay() === 0 ? 7 : d.getDay()) && attempts < 7) {
+        d.setDate(d.getDate() + 1); attempts++;
+      }
+      const weekDates = [];
+      let cur = new Date(d);
+      while (weekDates.length < days.length && weekDates.length < 7) {
+        const iso = cur.getDay() === 0 ? 7 : cur.getDay();
+        if (days.includes(iso)) weekDates.push(cur.toLocaleDateString(undefined, { month:"short", day:"numeric" }));
+        cur.setDate(cur.getDate() + 1);
+      }
+      return `Week 1: ${weekDates.join(" · ")}`;
     }
 
     // ── View mode ──────────────────────────────────────────────
@@ -140,47 +356,107 @@
     function renderView() {
       editMode = false;
       document.getElementById("edit-schedule-btn").textContent = "Edit Schedule";
+      const run = program.active_run;
+      const today = new Date().toISOString().slice(0, 10);
+
       const days = (program.days || []).slice().sort((a, b) =>
         a.week_number - b.week_number || a.day_order - b.day_order
       );
       const weeks = groupByWeek(days);
       const weekNums = Object.keys(weeks).map(Number).sort((a, b) => a - b);
 
-      const startStr = program.start_date
-        ? new Date(program.start_date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-        : null;
-
       let html = `
         <div class="pd-header-row">
           <h2 style="margin:0;font-size:1.1rem">${escapeHtml(program.name)}</h2>
         </div>
-        <div class="pd-meta">
-          ${program.total_weeks} week program
-          ${startStr ? ` · Started ${startStr}` : ""}
-          ${program.description ? ` · ${escapeHtml(program.description)}` : ""}
-        </div>`;
+        <div class="pd-meta">${program.total_weeks} week program${program.description ? ` · ${escapeHtml(program.description)}` : ""}</div>`;
 
+      // Active run banner OR inline start form
+      if (run) {
+        const trainingDays = run.training_days || [];
+        const dayNames = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+        const daysStr = trainingDays.map(d => dayNames[d - 1]).join(" · ");
+        const startStr = new Date(run.start_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric" });
+        html += `
+          <div class="run-banner">
+            <div>
+              <div class="run-banner-label">Active Run</div>
+              <div class="run-banner-detail">Started ${startStr} · ${daysStr}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="cancel-run-btn" data-run-id="${run.id}">Cancel</button>
+          </div>`;
+      } else {
+        // Build weekday pills
+        const pills = WEEKDAY_LABELS.map((lbl, i) => {
+          const isoDay = i + 1;
+          const sel = selectedDays.includes(isoDay) ? " selected" : "";
+          return `<button type="button" class="wd-pill${sel}" data-day="${isoDay}">${lbl}</button>`;
+        }).join("");
+
+        const startDate = today;
+        const preview = buildPreview(startDate, selectedDays);
+
+        html += `
+          <div class="start-section" id="start-section">
+            <div class="start-section-title">Start This Program</div>
+            <div class="form-group" style="margin-bottom:.75rem">
+              <label style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);display:block;margin-bottom:.4rem">Start Date</label>
+              <input type="date" id="run-start-date" value="${startDate}" style="padding:.4rem .6rem;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:.9rem;width:100%" />
+            </div>
+            <div style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:.4rem">Training Days</div>
+            <div class="weekday-picker" id="run-weekday-picker">${pills}</div>
+            <div class="start-preview" id="run-preview">${preview}</div>
+            <p class="form-error hidden" id="run-error"></p>
+            <div class="start-section-actions">
+              <button class="btn btn-primary" id="begin-run-btn">Begin Program</button>
+            </div>
+          </div>`;
+      }
+
+      // Schedule
       if (!days.length) {
-        html += `<div class="pd-empty">No days scheduled yet.<br>Click <strong>Edit Schedule</strong> to build your weekly plan.</div>`;
+        html += `<div class="pd-empty">No days yet.<br>Tap <strong>Edit Schedule</strong> to build your workouts.</div>`;
       } else {
         for (const wn of weekNums) {
           const wDays = weeks[wn].slice().sort((a, b) => a.day_order - b.day_order);
           html += `<div class="pd-week"><div class="pd-week-header">Week ${wn}</div>`;
           for (const day of wDays) {
+            const isToday = day.scheduled_date === today;
+            const isPastDue = day.scheduled_date && day.scheduled_date < today && day.workout_status === "planned";
+            const isCompleted = day.workout_status === "completed";
+            const dateStr = day.scheduled_date
+              ? new Date(day.scheduled_date + "T12:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric", weekday:"short" })
+              : null;
+
             if (day.template_id) {
+              let actionBtn = "";
+              if (day.workout_id && (isToday || isPastDue)) {
+                actionBtn = `<button class="btn btn-primary btn-sm" onclick="window.location.href='/session/${day.workout_id}'">Start</button>`;
+              } else if (day.workout_id && isCompleted) {
+                actionBtn = `<button class="btn btn-ghost btn-sm" onclick="window.location.href='/session/${day.workout_id}'">View</button>`;
+              }
+              let statusBadge = "";
+              if (isCompleted) statusBadge = `<span class="pd-status-badge pd-status-completed">Done</span>`;
+              else if (day.workout_status === "planned" && !isToday && !isPastDue) {
+                statusBadge = `<span class="pd-status-badge pd-status-planned">Upcoming</span>`;
+              }
               html += `
-                <div class="pd-day-card">
+                <div class="pd-day-card${isToday ? " today-card" : ""}">
                   <div class="pd-day-info">
                     <div class="pd-day-label">${day.label ? escapeHtml(day.label) : `Day ${day.day_order}`}</div>
-                    <div class="pd-day-template">${day.template_name ? escapeHtml(day.template_name) : "Template"}</div>
+                    <div class="pd-day-template">${day.template_name ? escapeHtml(day.template_name) : '<span style="color:var(--text-muted);font-style:italic">No template assigned</span>'}</div>
+                    ${dateStr ? `<div class="pd-day-date">${dateStr}${isToday ? " · Today" : (isPastDue ? " · Past due" : "")}</div>` : ""}
                   </div>
-                  <button class="btn btn-primary btn-sm start-day-btn" data-day-id="${day.id}">Start</button>
+                  ${statusBadge}
+                  ${actionBtn}
                 </div>`;
             } else {
               html += `
                 <div class="pd-day-card">
                   <div class="pd-day-info">
-                    <div class="pd-day-rest">${day.label ? escapeHtml(day.label) : `Day ${day.day_order} — Rest`}</div>
+                    <div class="pd-day-label">${day.label ? escapeHtml(day.label) : `Day ${day.day_order}`}</div>
+                    <div class="pd-day-template" style="font-style:italic">No workout — tap Edit Schedule to add one</div>
+                    ${dateStr ? `<div class="pd-day-date">${dateStr}</div>` : ""}
                   </div>
                 </div>`;
             }
@@ -190,9 +466,67 @@
       }
 
       document.getElementById("pd-content").innerHTML = html;
-      document.querySelectorAll(".start-day-btn").forEach(btn =>
-        btn.addEventListener("click", () => openStartModal(parseInt(btn.dataset.dayId)))
-      );
+
+      // Wire up cancel run
+      const cancelBtn = document.getElementById("cancel-run-btn");
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", async () => {
+          if (!confirm("Cancel the active run? Completed sessions will be kept. Unstarted sessions will be removed.")) return;
+          const runId = parseInt(cancelBtn.dataset.runId);
+          try {
+            await api(`/api/program-runs/${runId}`, "DELETE");
+            program.active_run = null;
+            program.days.forEach(d => { d.scheduled_date = null; d.workout_id = null; d.workout_status = null; });
+            selectedDays = defaultTrainingDays(inferDaysPerWeek(program));
+            renderView();
+          } catch { alert("Failed to cancel run."); }
+        });
+      }
+
+      // Wire up start form
+      const dateInput = document.getElementById("run-start-date");
+      const previewEl = document.getElementById("run-preview");
+      const errorEl  = document.getElementById("run-error");
+
+      if (dateInput) {
+        // Weekday pill toggles
+        document.querySelectorAll("#run-weekday-picker .wd-pill").forEach(pill => {
+          pill.addEventListener("click", () => {
+            const day = parseInt(pill.dataset.day);
+            if (selectedDays.includes(day)) {
+              if (selectedDays.length > 1) selectedDays = selectedDays.filter(d => d !== day);
+            } else {
+              selectedDays = [...selectedDays, day].sort((a, b) => a - b);
+            }
+            document.querySelectorAll("#run-weekday-picker .wd-pill").forEach(p =>
+              p.classList.toggle("selected", selectedDays.includes(parseInt(p.dataset.day)))
+            );
+            previewEl.textContent = buildPreview(dateInput.value, selectedDays);
+          });
+        });
+
+        dateInput.addEventListener("change", () => {
+          previewEl.textContent = buildPreview(dateInput.value, selectedDays);
+        });
+
+        document.getElementById("begin-run-btn").addEventListener("click", async () => {
+          errorEl.classList.add("hidden");
+          if (!dateInput.value) { errorEl.textContent = "Pick a start date."; errorEl.classList.remove("hidden"); return; }
+          if (!selectedDays.length) { errorEl.textContent = "Pick at least one training day."; errorEl.classList.remove("hidden"); return; }
+          try {
+            const run = await api(`/api/programs/${PROGRAM_ID}/runs`, "POST", {
+              start_date: dateInput.value,
+              training_days: selectedDays,
+            });
+            // Reload program with run data
+            program = await api(`/api/programs/${PROGRAM_ID}`);
+            renderView();
+          } catch (err) {
+            errorEl.textContent = err.message || "Failed to start program.";
+            errorEl.classList.remove("hidden");
+          }
+        });
+      }
     }
 
     // ── Edit mode ──────────────────────────────────────────────
@@ -200,28 +534,43 @@
       editMode = true;
       document.getElementById("edit-schedule-btn").textContent = "View Schedule";
 
-      // Seed edDays from current program days
-      edDays = (program.days || []).slice()
-        .sort((a, b) => a.week_number - b.week_number || a.day_order - b.day_order)
-        .map(d => ({ weekNumber: d.week_number, dayOrder: d.day_order, label: d.label || "", templateId: d.template_id || "" }));
-
-      // If no days, seed with week 1 empty
-      if (!edDays.length) {
-        const totalWeeks = program.total_weeks || 1;
-        for (let w = 1; w <= totalWeeks; w++) {
-          edDays.push({ weekNumber: w, dayOrder: 1, label: "", templateId: "" });
-        }
+      if (program.active_run) {
+        document.getElementById("pd-content").innerHTML = `
+          <div class="edit-banner">Editing is locked while a run is active</div>
+          <div class="ed-locked-banner">Cancel the active run first, then edit the schedule.</div>`;
+        return;
       }
 
+      edDays = (program.days || []).slice()
+        .sort((a, b) => a.week_number - b.week_number || a.day_order - b.day_order)
+        .map(d => ({
+          weekNumber: d.week_number, dayOrder: d.day_order,
+          label: d.label || "", templateId: d.template_id || "",
+          templateName: d.template_name || "",
+          pendingExercises: null,  // set when user builds a custom workout
+        }));
+
+      if (!edDays.length) {
+        for (let w = 1; w <= (program.total_weeks || 1); w++) {
+          edDays.push({ weekNumber: w, dayOrder: 1, label: "", templateId: "", templateName: "", pendingExercises: null });
+        }
+      }
       renderEditor();
     }
 
-    function renderEditor() {
-      const tplOptions = templates.map(t =>
-        `<option value="${t.id}">${escapeHtml(t.name)}</option>`
-      ).join("");
+    function workoutBtnLabel(d) {
+      if (d.pendingExercises) {
+        const name = d.pendingExercises.name || "Custom workout";
+        return { label: name, hasWorkout: true };
+      }
+      if (d.templateId) {
+        const t = templates.find(t => t.id === parseInt(d.templateId));
+        return { label: (t ? t.name : d.templateName) || "Template", hasWorkout: true };
+      }
+      return { label: "Tap to add workout", hasWorkout: false };
+    }
 
-      // Group edDays by week
+    function renderEditor() {
       const weeks = {};
       edDays.forEach((d, idx) => {
         if (!weeks[d.weekNumber]) weeks[d.weekNumber] = [];
@@ -229,7 +578,10 @@
       });
       const weekNums = Object.keys(weeks).map(Number).sort((a, b) => a - b);
 
-      let html = `<div class="edit-banner">Editing schedule — changes save when you press Save</div>`;
+      const bannerMsg = setupMode
+        ? "Building your program — tap each day to add a workout"
+        : "Editing schedule — tap a day to add or change its workout";
+      let html = `<div class="edit-banner">${bannerMsg}</div>`;
 
       for (const wn of weekNums) {
         const wDays = weeks[wn].slice().sort((a, b) => a.dayOrder - b.dayOrder);
@@ -238,48 +590,39 @@
             <div class="ed-week-header">
               <span>Week ${wn}</span>
               <button class="btn-icon remove-week-btn" data-week="${wn}" title="Remove week">&times;</button>
-            </div>
-            <div style="font-size:.7rem;color:var(--text-muted);display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;padding:0 .1rem .25rem">
-              <span>Label (optional)</span><span>Template (blank = rest)</span><span></span>
             </div>`;
         for (const d of wDays) {
+          const wb = workoutBtnLabel(d);
           html += `
             <div class="ed-day-row" data-idx="${d.idx}">
-              <input type="text" class="ed-label" placeholder="e.g. Monday / Squat A" value="${escapeHtml(d.label)}" />
-              <select class="ed-template">
-                <option value="">— Rest day —</option>
-                ${tplOptions}
-              </select>
-              <button class="btn-icon remove-day-btn" data-idx="${d.idx}" title="Remove day">&times;</button>
+              <div class="ed-day-top">
+                <input type="text" class="ed-label" placeholder="Day label (optional)" value="${escapeHtml(d.label)}" />
+                <button class="btn-icon remove-day-btn" data-idx="${d.idx}" title="Remove day">&times;</button>
+              </div>
+              <button class="ed-workout-btn${wb.hasWorkout ? " has-workout" : ""}" data-idx="${d.idx}">
+                <span class="ed-workout-name">${escapeHtml(wb.label)}</span>
+                <span class="ed-workout-chevron">&#8250;</span>
+              </button>
             </div>`;
         }
-        html += `
-            <button class="ed-add-day-btn" data-week="${wn}">+ Add day to Week ${wn}</button>
-          </div>`;
+        html += `<button class="ed-add-day-btn" data-week="${wn}">+ Add day to Week ${wn}</button></div>`;
       }
 
       const maxWeek = weekNums.length ? Math.max(...weekNums) : 0;
       html += `<button class="ed-add-week-btn" data-next-week="${maxWeek + 1}">+ Add Week ${maxWeek + 1}</button>`;
       html += `<p class="ed-error hidden" id="ed-error"></p>`;
-      html += `
-        <div class="ed-save-row">
-          <button class="btn btn-ghost" id="ed-cancel-btn">Cancel</button>
-          <button class="btn btn-primary" id="ed-save-btn">Save Schedule</button>
-        </div>`;
+      html += `<div class="ed-save-row"><button class="btn btn-ghost" id="ed-cancel-btn">Cancel</button><button class="btn btn-primary" id="ed-save-btn">Save Schedule</button></div>`;
 
       document.getElementById("pd-content").innerHTML = html;
 
-      // Set template selects to current values
       document.querySelectorAll(".ed-day-row").forEach(row => {
         const idx = parseInt(row.dataset.idx);
-        const sel = row.querySelector(".ed-template");
-        sel.value = edDays[idx].templateId || "";
-        sel.addEventListener("change", () => { edDays[idx].templateId = sel.value || ""; });
         row.querySelector(".ed-label").addEventListener("input", e => { edDays[idx].label = e.target.value; });
         row.querySelector(".remove-day-btn").addEventListener("click", () => {
           edDays.splice(idx, 1);
           reindexAndRender();
         });
+        row.querySelector(".ed-workout-btn").addEventListener("click", () => openDaySheet(idx));
       });
 
       document.querySelectorAll(".ed-add-day-btn").forEach(btn => {
@@ -287,7 +630,7 @@
           const wn = parseInt(btn.dataset.week);
           const wkDays = edDays.filter(d => d.weekNumber === wn);
           const nextOrder = wkDays.length ? Math.max(...wkDays.map(d => d.dayOrder)) + 1 : 1;
-          edDays.push({ weekNumber: wn, dayOrder: nextOrder, label: "", templateId: "" });
+          edDays.push({ weekNumber: wn, dayOrder: nextOrder, label: "", templateId: "", templateName: "", pendingExercises: null });
           renderEditor();
         });
       });
@@ -302,16 +645,15 @@
 
       document.querySelector(".ed-add-week-btn").addEventListener("click", e => {
         const wn = parseInt(e.currentTarget.dataset.nextWeek);
-        edDays.push({ weekNumber: wn, dayOrder: 1, label: "", templateId: "" });
+        edDays.push({ weekNumber: wn, dayOrder: 1, label: "", templateId: "", templateName: "", pendingExercises: null });
         renderEditor();
       });
 
-      document.getElementById("ed-cancel-btn").addEventListener("click", renderView);
+      document.getElementById("ed-cancel-btn").addEventListener("click", () => { setupMode = false; renderView(); });
       document.getElementById("ed-save-btn").addEventListener("click", saveSchedule);
     }
 
     function reindexAndRender() {
-      // Re-assign day_order per week after removals
       const byWeek = {};
       edDays.forEach(d => {
         if (!byWeek[d.weekNumber]) byWeek[d.weekNumber] = [];
@@ -327,7 +669,27 @@
     async function saveSchedule() {
       const errEl = document.getElementById("ed-error");
       errEl.classList.add("hidden");
-      const days = edDays.map((d, i) => ({
+
+      // Create any pending custom-built templates first
+      for (const d of edDays) {
+        if (d.pendingExercises) {
+          try {
+            const created = await api("/api/templates/", "POST", {
+              name: d.pendingExercises.name,
+              exercises: d.pendingExercises.exercises,
+            });
+            d.templateId = created.id;
+            templates.push(created);
+            d.pendingExercises = null;
+          } catch (err) {
+            errEl.textContent = `Failed to save workout "${d.pendingExercises.name}": ${err.message}`;
+            errEl.classList.remove("hidden");
+            return;
+          }
+        }
+      }
+
+      const days = edDays.map(d => ({
         week_number: d.weekNumber,
         day_order: d.dayOrder,
         label: d.label || null,
@@ -335,42 +697,274 @@
       }));
       try {
         program = await api(`/api/programs/${PROGRAM_ID}`, "PUT", { days });
+        selectedDays = defaultTrainingDays(inferDaysPerWeek(program));
+        setupMode = false;
         renderView();
-      } catch {
-        errEl.textContent = "Failed to save schedule. Please try again.";
+      } catch (err) {
+        errEl.textContent = err.message || "Failed to save schedule. Please try again.";
         errEl.classList.remove("hidden");
       }
     }
 
-    // ── Edit schedule toggle ────────────────────────────────────
-    document.getElementById("edit-schedule-btn").addEventListener("click", () => {
-      if (editMode) renderView(); else enterEditMode();
+    // ── Day workout sheet ──────────────────────────────────────
+    let dwsCurrentIdx = -1;
+    let dwsTab = "pick";  // "pick" | "build"
+    let dwsExercises = [];  // [{exerciseId, exerciseName, sets:[{reps,weight}]}]
+
+    function openDaySheet(idx) {
+      dwsCurrentIdx = idx;
+      const d = edDays[idx];
+      const dayLabel = d.label || `Week ${d.weekNumber} Day ${d.dayOrder}`;
+
+      document.getElementById("dws-title").textContent = dayLabel;
+
+      // Determine initial tab
+      const startTab = d.pendingExercises ? "build" : "pick";
+      switchDwsTab(startTab);
+
+      // Populate pick tab
+      renderTemplatePicker(d.templateId ? parseInt(d.templateId) : null);
+
+      // Populate build tab
+      if (d.pendingExercises) {
+        document.getElementById("dws-workout-name").value = d.pendingExercises.name || dayLabel;
+        dwsExercises = d.pendingExercises.exercises.map(ex => ({
+          exerciseId: ex.exercise_id,
+          exerciseName: ex.exercise_name || "",
+          weightType: ex.weight_type || "weight",
+          sets: ex.sets.map(s => ({ reps: s.reps || "", weight: s.weight || "" })),
+        }));
+      } else {
+        document.getElementById("dws-workout-name").value = dayLabel;
+        dwsExercises = [];
+      }
+      renderExerciseBuilder();
+
+      document.getElementById("day-workout-sheet").classList.remove("hidden");
+    }
+
+    function switchDwsTab(tab) {
+      dwsTab = tab;
+      document.querySelectorAll(".dws-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+      document.getElementById("dws-pick-panel").classList.toggle("active", tab === "pick");
+      document.getElementById("dws-build-panel").classList.toggle("active", tab === "build");
+    }
+
+    function renderTemplatePicker(selectedId) {
+      const listEl = document.getElementById("dws-template-list");
+      const emptyEl = document.getElementById("dws-no-templates");
+      if (!templates.length) {
+        listEl.innerHTML = "";
+        emptyEl.classList.remove("hidden");
+        return;
+      }
+      emptyEl.classList.add("hidden");
+      listEl.innerHTML = templates.map(t => {
+        const exCount = t.exercises ? t.exercises.length : 0;
+        const isSel = t.id === selectedId;
+        const hasPercent = t.exercises && t.exercises.some(ex =>
+          ex.sets && ex.sets.some(s => s.percent != null)
+        );
+        const metaText = exCount
+          ? `${exCount} exercise${exCount !== 1 ? "s" : ""}${hasPercent ? " · % based" : ""}`
+          : "";
+        return `
+          <div class="tpl-pick-item${isSel ? " selected" : ""}" data-id="${t.id}">
+            <div>
+              <div class="tpl-pick-name">${escapeHtml(t.name)}</div>
+              ${metaText ? `<div class="tpl-pick-meta">${metaText}</div>` : ""}
+            </div>
+            <span class="tpl-pick-check">&#10003;</span>
+          </div>`;
+      }).join("");
+
+      listEl.querySelectorAll(".tpl-pick-item").forEach(item => {
+        item.addEventListener("click", () => {
+          listEl.querySelectorAll(".tpl-pick-item").forEach(i => i.classList.remove("selected"));
+          item.classList.add("selected");
+        });
+      });
+    }
+
+    function renderExerciseBuilder() {
+      const listEl = document.getElementById("dws-exercises-list");
+      listEl.innerHTML = dwsExercises.map((ex, ei) => {
+        const isPercent = ex.weightType === 'percent';
+        return `
+        <div class="bld-ex-row" data-ei="${ei}">
+          <div class="bld-ex-name-wrap">
+            <input type="text" class="bld-ex-name" placeholder="Exercise name" value="${escapeHtml(ex.exerciseName)}" data-ei="${ei}" autocomplete="off" />
+            <ul class="autocomplete-list hidden" id="bld-ac-${ei}"></ul>
+          </div>
+          <div class="bld-wt-toggle">
+            <button type="button" class="bld-wt-btn${!isPercent ? ' active' : ''}" data-ei="${ei}" data-type="weight">lbs</button>
+            <button type="button" class="bld-wt-btn${isPercent ? ' active' : ''}" data-ei="${ei}" data-type="percent">%</button>
+          </div>
+          <div class="bld-set-headers">
+            <span></span><span style="text-align:center">Reps</span><span style="text-align:center">${isPercent ? 'Percent' : 'Weight'}</span><span></span><span></span>
+          </div>
+          <div class="bld-set-rows" id="bld-sets-${ei}">
+            ${ex.sets.map((s, si) => `
+              <div class="bld-set-row" data-si="${si}">
+                <span class="bld-set-num">${si + 1}</span>
+                <input class="bld-set-input bld-reps" type="number" min="1" placeholder="—" value="${s.reps || ""}" data-ei="${ei}" data-si="${si}" />
+                <input class="bld-set-input bld-weight${isPercent ? ' bld-percent-input' : ''}" type="number" min="0" ${isPercent ? 'max="100" step="1"' : `step="${weightInputStep()}"`} placeholder="—" value="${s.weight || ""}" data-ei="${ei}" data-si="${si}" />
+                <span class="bld-set-num" style="font-size:.72rem;color:var(--text-muted)">${isPercent ? '%' : unitLabel()}</span>
+                <button class="bld-set-remove" data-ei="${ei}" data-si="${si}">×</button>
+              </div>`).join("")}
+          </div>
+          <div class="bld-ex-footer">
+            <button class="bld-add-set" data-ei="${ei}">+ set</button>
+            <button class="bld-remove-ex" data-ei="${ei}">Remove exercise</button>
+          </div>
+        </div>`;
+      }).join("");
+
+      // Wire up exercise name autocomplete
+      dwsExercises.forEach((ex, ei) => {
+        const input = listEl.querySelector(`.bld-ex-name[data-ei="${ei}"]`);
+        const acList = document.getElementById(`bld-ac-${ei}`);
+        if (input && acList) {
+          attachLibraryAutocomplete(input, acList, item => {
+            dwsExercises[ei].exerciseId = item.id;
+            dwsExercises[ei].exerciseName = item.name;
+          });
+          input.addEventListener("input", () => {
+            dwsExercises[ei].exerciseName = input.value;
+            if (!input.value) dwsExercises[ei].exerciseId = null;
+          });
+        }
+      });
+
+      // Wire up set inputs
+      listEl.querySelectorAll(".bld-reps").forEach(inp => {
+        inp.addEventListener("input", () => {
+          const ei = parseInt(inp.dataset.ei), si = parseInt(inp.dataset.si);
+          dwsExercises[ei].sets[si].reps = parseInt(inp.value) || null;
+        });
+      });
+      listEl.querySelectorAll(".bld-weight").forEach(inp => {
+        inp.addEventListener("input", () => {
+          const ei = parseInt(inp.dataset.ei), si = parseInt(inp.dataset.si);
+          const isPercent = dwsExercises[ei].weightType === 'percent';
+          dwsExercises[ei].sets[si].weight = isPercent
+            ? (parseFloat(inp.value) || null)
+            : fromInputWeight(inp.value);
+        });
+      });
+
+      // Weight type toggle
+      listEl.querySelectorAll(".bld-wt-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const ei = parseInt(btn.dataset.ei);
+          if (dwsExercises[ei].weightType === btn.dataset.type) return;
+          dwsExercises[ei].weightType = btn.dataset.type;
+          dwsExercises[ei].sets.forEach(s => { s.weight = null; });
+          renderExerciseBuilder();
+        });
+      });
+
+      // Remove set
+      listEl.querySelectorAll(".bld-set-remove").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const ei = parseInt(btn.dataset.ei), si = parseInt(btn.dataset.si);
+          dwsExercises[ei].sets.splice(si, 1);
+          renderExerciseBuilder();
+        });
+      });
+
+      // Add set
+      listEl.querySelectorAll(".bld-add-set").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const ei = parseInt(btn.dataset.ei);
+          const prev = dwsExercises[ei].sets.at(-1) || {};
+          dwsExercises[ei].sets.push({ reps: prev.reps || null, weight: prev.weight || null });
+          renderExerciseBuilder();
+        });
+      });
+
+      // Remove exercise
+      listEl.querySelectorAll(".bld-remove-ex").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const ei = parseInt(btn.dataset.ei);
+          dwsExercises.splice(ei, 1);
+          renderExerciseBuilder();
+        });
+      });
+    }
+
+    // Wire sheet controls once
+    document.querySelectorAll(".dws-tab").forEach(tab => {
+      tab.addEventListener("click", () => switchDwsTab(tab.dataset.tab));
+    });
+    const _closeSheet = () => document.getElementById("day-workout-sheet").classList.add("hidden");
+    document.getElementById("dws-close-btn").addEventListener("click", _closeSheet);
+    document.getElementById("dws-cancel-btn").addEventListener("click", _closeSheet);
+
+    document.getElementById("dws-add-ex-btn").addEventListener("click", () => {
+      dwsExercises.push({ exerciseId: null, exerciseName: "", weightType: "weight", sets: [{ reps: null, weight: null }] });
+      renderExerciseBuilder();
     });
 
-    // ── Start session modal ────────────────────────────────────
-    function openStartModal(dayId) {
-      startingDayId = dayId;
-      document.getElementById("start-date-input").value = new Date().toISOString().slice(0, 10);
-      document.getElementById("start-error").classList.add("hidden");
-      document.getElementById("start-session-overlay").classList.remove("hidden");
-    }
-    function closeStartModal() {
-      document.getElementById("start-session-overlay").classList.add("hidden");
-    }
-    document.getElementById("close-start-btn").addEventListener("click", closeStartModal);
-    document.getElementById("cancel-start-btn").addEventListener("click", closeStartModal);
-    document.getElementById("confirm-start-btn").addEventListener("click", async () => {
-      const errEl = document.getElementById("start-error");
-      errEl.classList.add("hidden");
-      const date = document.getElementById("start-date-input").value;
-      try {
-        const session = await api(`/api/programs/${PROGRAM_ID}/days/${startingDayId}/start`, "POST",
-          { date: date ? date + "T12:00:00" : null });
-        window.location.href = `/session/${session.id}`;
-      } catch {
-        errEl.textContent = "Failed to start session. Make sure the day has a template assigned.";
-        errEl.classList.remove("hidden");
+    document.getElementById("dws-done-btn").addEventListener("click", () => {
+      if (dwsCurrentIdx < 0) { _closeSheet(); return; }
+
+      if (dwsTab === "pick") {
+        const sel = document.querySelector(".tpl-pick-item.selected");
+        if (sel) {
+          const id = parseInt(sel.dataset.id);
+          edDays[dwsCurrentIdx].templateId = id;
+          edDays[dwsCurrentIdx].templateName = templates.find(t => t.id === id)?.name || "";
+          edDays[dwsCurrentIdx].pendingExercises = null;
+        }
+      } else {
+        // Build tab
+        const name = document.getElementById("dws-workout-name").value.trim()
+          || edDays[dwsCurrentIdx].label
+          || `Week ${edDays[dwsCurrentIdx].weekNumber} Day ${edDays[dwsCurrentIdx].dayOrder}`;
+        const validExercises = dwsExercises.filter(ex => ex.exerciseId && ex.sets.length);
+
+        // Validate percent values
+        for (const ex of validExercises) {
+          if (ex.weightType === 'percent') {
+            for (const s of ex.sets) {
+              const pct = parseFloat(s.weight);
+              if (s.weight != null && s.weight !== '' && (isNaN(pct) || pct < 1 || pct > 100)) {
+                const errEl = document.getElementById("dws-error");
+                errEl.textContent = "Percent values must be between 1 and 100.";
+                errEl.classList.remove("hidden");
+                return;
+              }
+            }
+          }
+        }
+
+        if (validExercises.length) {
+          edDays[dwsCurrentIdx].pendingExercises = {
+            name,
+            exercises: validExercises.map((ex, i) => ({
+              exercise_id: ex.exerciseId,
+              exercise_name: ex.exerciseName,
+              weight_type: ex.weightType,
+              order_index: i,
+              sets: ex.sets.filter(s => s.reps).map((s, si) => ({
+                set_number: si + 1,
+                reps: s.reps,
+                weight_lb: ex.weightType === 'weight' ? (s.weight || null) : null,
+                percent: ex.weightType === 'percent' ? (s.weight || null) : null,
+              })),
+            })),
+          };
+          edDays[dwsCurrentIdx].templateId = "";
+        }
       }
+
+      _closeSheet();
+      renderEditor();
+    });
+
+    document.getElementById("edit-schedule-btn").addEventListener("click", () => {
+      if (editMode) renderView(); else enterEditMode();
     });
 
     init().catch(() => {

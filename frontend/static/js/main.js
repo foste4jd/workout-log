@@ -107,7 +107,7 @@ function initUnitToggle(onToggle) {
 
 /**
  * Attach autocomplete to an input element using the canonical exercise library.
- * onSelect(item) is called with {id, name, category} when the user picks one.
+ * onSelect(item) is called with {id, name, primary_muscle, ...} when the user picks one.
  */
 async function attachLibraryAutocomplete(input, listEl, onSelect) {
   const library = await getLibrary();
@@ -124,9 +124,10 @@ async function attachLibraryAutocomplete(input, listEl, onSelect) {
     const matches = library.filter(e => e.name.toLowerCase().includes(q.toLowerCase())).slice(0, 12);
     if (!matches.length) { close(); return; }
     activeIdx = -1;
-    listEl.innerHTML = matches.map((m, i) =>
-      `<li class="autocomplete-item" data-idx="${i}" data-id="${m.id}" data-name="${escapeHtml(m.name)}">${escapeHtml(m.name)}<small style="color:var(--text-muted);margin-left:.4rem">${m.category}</small></li>`
-    ).join("");
+    listEl.innerHTML = matches.map((m, i) => {
+      const tag = m.primary_muscle || m.movement_pattern || "";
+      return `<li class="autocomplete-item" data-idx="${i}" data-id="${m.id}" data-name="${escapeHtml(m.name)}">${escapeHtml(m.name)}<small style="color:var(--text-muted);margin-left:.4rem">${escapeHtml(tag)}</small></li>`;
+    }).join("");
     listEl.classList.remove("hidden");
     listEl.querySelectorAll(".autocomplete-item").forEach(li => {
       li.addEventListener("mousedown", ev => {
@@ -171,6 +172,27 @@ function initLogout() {
     try { await api("/api/users/logout", "POST"); } catch (_) {}
     window.location.href = "/login";
   });
+}
+
+// ── Active program widget ─────────────────────────────────────────────────────
+
+/** Populate #active-prog-strip if the user has an active program run. */
+async function initActiveProgramWidget() {
+  const strip = document.getElementById("active-prog-strip");
+  if (!strip) return;
+  try {
+    const run = await api("/api/program-runs/active");
+    if (!run || !run.program) return;
+    const linkEl = document.getElementById("active-prog-link");
+    const weekEl = document.getElementById("active-prog-week");
+    if (!linkEl) return;
+    linkEl.textContent = run.program.name.toUpperCase();
+    linkEl.href = `/programs/${run.program.id}`;
+    const wk = run.current_week || "?";
+    const total = run.program.total_weeks || "?";
+    weekEl.textContent = `Week ${wk} of ${total}`;
+    strip.style.display = "flex";
+  } catch (_) {}
 }
 
 // ── Toast notifications ───────────────────────────────────────────────────────

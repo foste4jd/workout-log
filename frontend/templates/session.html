@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Workout – Barpath</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/css/main.css" />
   <style>
     /* ── Session layout ──────────────────────────────────────────── */
@@ -24,15 +27,110 @@
       justify-content: center;
       color: var(--text-muted);
       text-decoration: none;
-      width: 2.2rem;
-      height: 2.2rem;
+      width: 2.75rem;
+      height: 2.75rem;
       border-radius: var(--radius-sm);
       flex-shrink: 0;
       transition: color .15s, background .15s;
     }
     .session-back:hover { color: var(--text-2); background: var(--surface-2); }
+
+    /* ── Header right cluster ──────────────────────────────────────── */
+    .session-header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: .15rem;
+      flex-shrink: 0;
+    }
+    .session-more-wrap { position: relative; }
+    .session-more-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.75rem;
+      height: 2.75rem;
+      background: none;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.2rem;
+      letter-spacing: .05em;
+      -webkit-tap-highlight-color: transparent;
+      transition: color .12s, background .12s;
+    }
+    .session-more-btn:hover { color: var(--text-2); background: var(--surface-2); }
+    .session-more-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      background: var(--surface-2);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 168px;
+      z-index: 200;
+      padding: .3rem 0;
+      opacity: 1;
+      transform-origin: top right;
+    }
+    .session-more-menu.hidden { display: none; }
+    .session-more-item {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      width: 100%;
+      padding: .6rem 1rem;
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: .875rem;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      color: var(--text-2);
+      -webkit-tap-highlight-color: transparent;
+      transition: background .1s, color .1s;
+    }
+    .session-more-item:hover { background: var(--surface-3); color: var(--text); }
+    .session-more-item.danger { color: var(--danger); }
+    .session-more-item.danger:hover { background: var(--danger-dim); color: var(--danger); }
+
+    /* ── Delete confirmation strip ──────────────────────────── */
+    .delete-strip {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface-2);
+      border-top: 1px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: .875rem 1.25rem;
+      padding-bottom: calc(.875rem + env(safe-area-inset-bottom, 0px));
+      z-index: 300;
+      transform: translateY(0);
+      transition: transform .18s cubic-bezier(.16, 1, .3, 1), opacity .18s ease;
+    }
+    .delete-strip.hidden {
+      transform: translateY(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .delete-strip-msg {
+      font-size: .875rem;
+      font-weight: 500;
+      color: var(--text-2);
+    }
+    .delete-strip-actions {
+      display: flex;
+      gap: .5rem;
+      flex-shrink: 0;
+    }
+
     .session-title {
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: 1.35rem;
       font-weight: 700;
       letter-spacing: 0.01em;
@@ -168,7 +266,7 @@
 
     /* Set number — fixed column, tells you exactly where you are */
     .set-num {
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: .8rem;
       font-weight: 700;
       letter-spacing: .04em;
@@ -208,7 +306,7 @@
     .set-item.active { background: var(--accent-dim); }
     .set-item.active .set-num    { color: var(--accent); }
     .set-item.active .set-planned { color: var(--text); }
-    .set-item.active .set-check  { border-color: var(--accent); color: var(--accent); }
+    .set-item.active .set-check  { border-color: var(--accent); }
 
     /* Done */
     .set-item.done { background: color-mix(in srgb, var(--success) 5%, var(--surface)); }
@@ -216,13 +314,13 @@
     .set-item.done .set-planned {
       color: var(--text-muted);
       text-decoration: line-through;
-      text-decoration-color: oklch(46% 0.012 232 / .6);
+      text-decoration-color: oklch(46% 0.012 70 / .6);
     }
     .set-item.done .set-type-badge { opacity: .35; }
     .set-item.done .set-check {
       background: var(--success);
       border-color: var(--success);
-      color: oklch(10% 0.01 145);
+      color: oklch(16% 0.018 145);
       animation: check-done .22s ease-out;
     }
 
@@ -232,25 +330,28 @@
       100% { transform: scale(1); }
     }
 
-    /* Check circle */
+    /* Check circle — 24px visual, 44px touch target via ::after */
     .set-check {
-      width: 2.75rem;
-      height: 2.75rem;
-      border: 2px solid var(--border-strong);
+      position: relative;
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 1.5px solid var(--border-strong);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      font-size: 1rem;
-      font-weight: 700;
       color: transparent;
+      cursor: pointer;
       transition: background .14s ease-out, border-color .14s ease-out, color .14s ease-out;
-      margin: -.4rem -.2rem -.4rem 0;
-      padding: .4rem .2rem;
-      box-sizing: content-box;
     }
-    .set-check:active { transform: scale(.85); transition: transform .06s ease-in; }
+    /* Invisible tap zone — keeps visual tight, touch target meets 44px minimum */
+    .set-check::after {
+      content: '';
+      position: absolute;
+      inset: -0.625rem;
+    }
+    .set-check:active { transform: scale(.82); transition: transform .06s ease-in; }
 
     /* Type badge */
     .set-type-badge {
@@ -311,7 +412,7 @@
       color: var(--text-muted); flex-shrink: 0;
     }
     .rest-timer-time {
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: 1.6rem;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
@@ -410,7 +511,7 @@
       margin: 0 auto 1rem;
     }
     .sheet-title {
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: 1.1rem;
       font-weight: 700;
       letter-spacing: .01em;
@@ -444,7 +545,7 @@
     }
     .sheet-input-group input {
       font-size: 1.75rem; font-weight: 700;
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       letter-spacing: -.01em;
       text-align: center;
       padding: .65rem .5rem;
@@ -503,9 +604,9 @@
     .sheet-save-btn {
       width: 100%; padding: 1rem;
       background: var(--accent);
-      color: oklch(96% 0.005 232);
+      color: oklch(96% 0.006 85);
       border: none; border-radius: var(--radius);
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: 1rem; font-weight: 700;
       letter-spacing: .08em; text-transform: uppercase;
       cursor: pointer;
@@ -550,12 +651,29 @@
       </a>
       <span class="session-title" id="session-title">Loading…</span>
       <span id="session-status-badge"></span>
-      <button class="btn btn-ghost btn-sm unit-toggle" title="Switch weight units" style="margin-left:auto;flex-shrink:0">lbs</button>
+      <div class="session-header-right">
+        <button class="btn btn-ghost btn-sm unit-toggle" title="Switch weight units">lbs</button>
+        <div class="session-more-wrap">
+          <button class="session-more-btn" id="session-more-btn" aria-label="More options" aria-haspopup="true" aria-expanded="false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+          </button>
+          <div class="session-more-menu hidden" id="session-more-menu" role="menu">
+            <button class="session-more-item danger" id="delete-workout-btn" role="menuitem">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              Delete Workout
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="session-meta" id="session-meta">
       <span id="session-meta-date"></span>
       <span class="session-meta-sep">·</span>
       <span class="session-elapsed-inline" id="session-elapsed"></span>
+      <span id="session-program-ctx" style="display:none">
+        <span class="session-meta-sep">·</span>
+        <span id="session-program-label" style="color:var(--accent);font-weight:600"></span>
+      </span>
     </div>
   </div>
 
@@ -584,6 +702,15 @@
   <div class="session-action-bar">
     <button class="btn-add-ex" id="add-ex-btn">+ Exercise</button>
     <button class="btn btn-primary" id="complete-btn">Complete Workout</button>
+  </div>
+
+  <!-- Delete confirmation strip — slides up above action bar -->
+  <div class="delete-strip hidden" id="delete-strip" role="alertdialog" aria-label="Confirm delete">
+    <span class="delete-strip-msg">Delete this workout?</span>
+    <div class="delete-strip-actions">
+      <button class="btn btn-ghost btn-sm" id="delete-cancel-btn">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="delete-confirm-btn">Delete</button>
+    </div>
   </div>
 
   <!-- Set edit sheet -->
@@ -683,6 +810,21 @@
       const metaDate = document.getElementById("session-meta-date");
       metaDate.textContent = formatDate(workout.date) +
         (workout.duration_minutes ? `  ·  ${workout.duration_minutes} min` : "");
+
+      // Program context chip
+      const ctxEl = document.getElementById("session-program-ctx");
+      const labelEl = document.getElementById("session-program-label");
+      if (workout.program_run_id && workout.program_day_id) {
+        api("/api/program-runs/active").then(run => {
+          if (run && run.id === workout.program_run_id) {
+            const wk = run.current_week || "?";
+            labelEl.textContent = `${run.program.name} · Wk ${wk}`;
+            ctxEl.style.display = "inline";
+          }
+        }).catch(() => {});
+      } else {
+        ctxEl.style.display = "none";
+      }
 
       const badge = document.getElementById("session-status-badge");
       if (workout.status === "completed") {
@@ -886,7 +1028,7 @@
             ${actualHtml}
           </div>
           ${typeBadge}
-          <div class="set-check" aria-label="Complete set ${s.set_number}">✓</div>
+          <div class="set-check" aria-label="Complete set ${s.set_number}"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1.5 5 4 7.5 8.5 2"/></svg></div>
         </li>`;
     }
 
@@ -1302,6 +1444,61 @@
 
     initUnitToggle(() => render());
     boot();
+
+    // ── More menu ─────────────────────────────────────────────────
+    const moreBtn  = document.getElementById("session-more-btn");
+    const moreMenu = document.getElementById("session-more-menu");
+
+    moreBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      const open = !moreMenu.classList.contains("hidden");
+      moreMenu.classList.toggle("hidden", open);
+      moreBtn.setAttribute("aria-expanded", String(!open));
+    });
+
+    document.addEventListener("click", () => {
+      moreMenu.classList.add("hidden");
+      moreBtn.setAttribute("aria-expanded", "false");
+    });
+
+    // ── Delete workflow — inline strip, no native confirm() ──────
+    const deleteStrip  = document.getElementById("delete-strip");
+    const cancelBtn    = document.getElementById("delete-cancel-btn");
+    const confirmBtn   = document.getElementById("delete-confirm-btn");
+
+    function showDeleteStrip() {
+      deleteStrip.classList.remove("hidden");
+      cancelBtn.focus();
+    }
+    function hideDeleteStrip() {
+      deleteStrip.classList.add("hidden");
+    }
+
+    document.getElementById("delete-workout-btn").addEventListener("click", () => {
+      moreMenu.classList.add("hidden");
+      moreBtn.setAttribute("aria-expanded", "false");
+      showDeleteStrip();
+    });
+
+    cancelBtn.addEventListener("click", hideDeleteStrip);
+
+    confirmBtn.addEventListener("click", async () => {
+      confirmBtn.disabled  = true;
+      confirmBtn.textContent = "Deleting…";
+      try {
+        await api(`/api/workouts/${WORKOUT_ID}`, "DELETE");
+        window.location.href = "/workouts";
+      } catch (err) {
+        showToast("Could not delete: " + err.message, "error");
+        hideDeleteStrip();
+        confirmBtn.disabled   = false;
+        confirmBtn.textContent = "Delete";
+      }
+    });
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && !deleteStrip.classList.contains("hidden")) hideDeleteStrip();
+    });
   </script>
 </body>
 </html>

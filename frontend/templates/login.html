@@ -6,31 +6,30 @@
   <title>Sign In – Barpath</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700;800&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:           oklch(7%  0.010 30);
-      --surface:      oklch(11% 0.013 30);
-      --surface-2:    oklch(15% 0.015 30);
-      --border:       oklch(23% 0.016 30);
-      --border-strong:oklch(31% 0.019 30);
-      --text:         oklch(94% 0.005 30);
-      --text-2:       oklch(74% 0.009 30);
-      --text-muted:   oklch(48% 0.011 30);
-      --accent:       oklch(68% 0.16 55);
-      --accent-dim:   oklch(68% 0.16 55 / 0.12);
+      --bg:           oklch(8%  0.005 60);
+      --surface:      oklch(12% 0.006 60);
+      --surface-2:    oklch(16% 0.007 60);
+      --border:       oklch(28% 0.010 60);
+      --border-strong:oklch(32% 0.010 60);
+      --text:         oklch(95% 0.010 85);
+      --text-2:       oklch(74% 0.010 75);
+      --text-muted:   oklch(48% 0.012 70);
+      --accent:       oklch(70% 0.175 42);
+      --accent-dim:   oklch(70% 0.175 42 / 0.12);
       --danger:       oklch(58% 0.21 14);
       --danger-dim:   oklch(58% 0.21 14 / 0.10);
-      /* ruled-line color — very faint, references training journal paper */
-      --rule:         oklch(13% 0.011 30);
+      --rule:         oklch(14% 0.006 60);
     }
 
     html, body { height: 100%; }
 
     body {
-      font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
       background-color: var(--bg);
       background-image: repeating-linear-gradient(
         0deg,
@@ -60,16 +59,11 @@
 
     /* ── Wordmark ──────────────────────────────────── */
     .wordmark {
-      font-family: 'Barlow Semi Condensed', sans-serif;
-      font-weight: 800;
-      font-size: 1.05rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 56px;
+      margin-bottom: 52px;
+      color: var(--text);
+      line-height: 0;
     }
-
-    .wordmark { color: var(--text); }
+    .wordmark svg { display: block; width: 100%; max-width: 220px; height: auto; }
 
     /* ── Heading ───────────────────────────────────── */
     .auth-heading {
@@ -77,7 +71,7 @@
     }
 
     .auth-heading h1 {
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-weight: 700;
       font-size: 2.1rem;
       letter-spacing: -0.01em;
@@ -132,7 +126,7 @@
       border: 1px solid var(--border);
       border-radius: 5px;
       color: var(--text);
-      font-family: 'Hanken Grotesk', sans-serif;
+      font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
       font-size: 1rem;
       font-weight: 400;
       padding: 13px 14px;
@@ -165,10 +159,10 @@
       width: 100%;
       padding: 14px;
       background: var(--accent);
-      color: oklch(96% 0.005 232);
+      color: oklch(14% 0.020 40);
       border: none;
       border-radius: 5px;
-      font-family: 'Barlow Semi Condensed', sans-serif;
+      font-family: 'Big Shoulders Display', sans-serif;
       font-size: 0.95rem;
       font-weight: 700;
       letter-spacing: 0.1em;
@@ -229,7 +223,23 @@
 
   <div class="auth-shell">
 
-    <div class="wordmark">Barpath</div>
+    <div class="wordmark" style="display:flex;align-items:center;gap:12px;">
+      <svg viewBox="0 0 320 320" width="40" height="40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0;">
+        <defs>
+          <mask id="bp-cuts-auth">
+            <rect width="320" height="320" fill="#fff"/>
+            <rect x="0" y="118" width="320" height="14" fill="#000"/>
+            <rect x="0" y="208" width="320" height="14" fill="#000"/>
+          </mask>
+        </defs>
+        <text x="160" y="300" text-anchor="middle"
+              font-family="'Big Shoulders Display', sans-serif"
+              font-weight="900" font-size="320"
+              fill="currentColor"
+              mask="url(#bp-cuts-auth)">B</text>
+      </svg>
+      <span style="font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:1.6rem;letter-spacing:0.02em;text-transform:uppercase;line-height:0.9;" aria-label="Barpath">BARPATH</span>
+    </div>
 
     <div class="auth-heading">
       <h1 id="heading-title">Welcome back.</h1>

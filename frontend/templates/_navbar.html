@@ -5,7 +5,23 @@
   (initUnitToggle, initLogout) called from the page's {% block scripts %}.
 #}
 <nav class="navbar">
-  <span class="nav-logo">Barpath</span>
+  <a href="/workouts" class="nav-logo" aria-label="Barpath" style="display:flex;align-items:center;gap:8px;">
+    <svg viewBox="0 0 320 320" width="28" height="28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0;">
+      <defs>
+        <mask id="bp-cuts-nav">
+          <rect width="320" height="320" fill="#fff"/>
+          <rect x="0" y="118" width="320" height="14" fill="#000"/>
+          <rect x="0" y="208" width="320" height="14" fill="#000"/>
+        </mask>
+      </defs>
+      <text x="160" y="300" text-anchor="middle"
+            font-family="'Big Shoulders Display', sans-serif"
+            font-weight="900" font-size="320"
+            fill="currentColor"
+            mask="url(#bp-cuts-nav)">B</text>
+    </svg>
+    <span style="font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:1rem;letter-spacing:0.06em;text-transform:uppercase;line-height:1;">BARPATH</span>
+  </a>
   <div class="nav-right">
     {% if username is defined and username %}
     <a href="/account" class="nav-username">{{ username }}</a>
@@ -21,3 +37,7 @@
     </button>
   </div>
 </nav>
+<div id="active-prog-strip" style="display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:.35rem 1rem;display:none;align-items:center;justify-content:space-between;gap:.75rem;" aria-live="polite">
+  <a id="active-prog-link" href="/programs" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:75%;"></a>
+  <span style="font-size:.7rem;color:var(--text-muted);white-space:nowrap" id="active-prog-week"></span>
+</div>

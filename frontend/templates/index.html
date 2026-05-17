@@ -4,11 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Barpath</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/static/css/main.css" />
 </head>
 <body class="landing">
   <div class="hero">
-    <h1>Barpath</h1>
+    <div class="hero-mono">
+      <svg viewBox="0 0 320 320" width="72" height="72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <mask id="bp-cuts-hero">
+            <rect width="320" height="320" fill="#fff"/>
+            <rect x="0" y="118" width="320" height="14" fill="#000"/>
+            <rect x="0" y="208" width="320" height="14" fill="#000"/>
+          </mask>
+        </defs>
+        <text x="160" y="300" text-anchor="middle"
+              font-family="'Big Shoulders Display', sans-serif"
+              font-weight="900" font-size="320"
+              fill="currentColor"
+              mask="url(#bp-cuts-hero)">B</text>
+      </svg>
+    </div>
+    <div class="hero-wordmark">
+      <span style="font-family:'Big Shoulders Display',sans-serif;font-weight:900;font-size:clamp(2.2rem,8vw,3.5rem);letter-spacing:0.02em;text-transform:uppercase;line-height:0.9;display:block;" aria-label="Barpath">BARPATH</span>
+    </div>
     <p>Plan, log, and grow — every session.</p>
     <div class="hero-actions">
       <a href="/login" class="btn btn-primary">Get Started</a>

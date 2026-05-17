@@ -1,24 +1,23 @@
-/* ── Google Fonts – Barlow Semi Condensed + Hanken Grotesk */
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700;800&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap');
-
 /* ── Reset & base ─────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
   /* ── Palette (OKLCH — perceptually uniform) ─────────── */
-  /* Base: warm charcoal — hue 30 (iron / chalk / gym leather) */
-  --bg:            oklch(7%   0.010 30);
-  --surface:       oklch(11%  0.013 30);
-  --surface-2:     oklch(15%  0.015 30);
-  --surface-3:     oklch(19%  0.017 30);
-  --border:        oklch(23%  0.016 30);
-  --border-strong: oklch(31%  0.019 30);
+  /* Base: warm iron charcoal — hue 60 (gym chalk, iron, forge) */
+  --bg:            oklch(8%   0.005 60);
+  --surface:       oklch(12%  0.006 60);
+  --surface-2:     oklch(16%  0.007 60);
+  --surface-3:     oklch(20%  0.008 60);
+  --border:        oklch(28%  0.010 60);
+  --border-strong: oklch(32%  0.010 60);
 
-  /* ── Accent — burnished amber / iron ────────────────── */
-  --accent:       oklch(68% 0.16 55);
-  --accent-hover: oklch(63% 0.16 55);
-  --accent-dim:   oklch(68% 0.16 55 / .10);
-  --accent-dim-2: oklch(68% 0.16 55 / .18);
+  /* ── Accent — ember orange (hue 42) ─────────────────── */
+  --accent:       oklch(70% 0.175 42);
+  --accent-hover: oklch(65% 0.175 42);
+  --accent-dim:   oklch(70% 0.175 42 / .12);
+  --accent-dim-2: oklch(70% 0.175 42 / .22);
+  --on-accent:    oklch(14% 0.020 40);
+  --ember:        var(--accent);
 
   /* ── Semantic ───────────────────────────────────────── */
   --success:       oklch(62% 0.17 145);
@@ -28,10 +27,10 @@
   --danger-hover:  oklch(53% 0.20 14);
   --danger-dim:    oklch(58% 0.20 14 / .10);
 
-  /* ── Text — warm off-white / gray ───────────────────── */
-  --text:       oklch(94% 0.005 30);
-  --text-2:     oklch(74% 0.009 30);
-  --text-muted: oklch(48% 0.011 30);
+  /* ── Text — warm bone / chalk ───────────────────────── */
+  --text:       oklch(95% 0.010 85);
+  --text-2:     oklch(74% 0.010 75);
+  --text-muted: oklch(48% 0.012 70);
 
   /* ── Radius ─────────────────────────────────────────── */
   --radius-sm:  5px;
@@ -52,6 +51,38 @@
   /* ── Chrome ─────────────────────────────────────────── */
   --bn-height: 60px;
 
+  /* ── Surface texture ─────────────────────────────────── */
+  --rule: oklch(14% 0.006 60);
+
+  /* ── Extended spacing ────────────────────────────────── */
+  --sp-12: 48px;
+
+  /* ── Shadows (extended) ──────────────────────────────── */
+  --shadow-sheet: 0 -8px 40px oklch(0% 0 0 / .55);
+
+  /* ── Brand signals ───────────────────────────────────── */
+  --pr:       oklch(72% 0.19 142);
+  --pr-dim:   oklch(72% 0.19 142 / .12);
+  --heavy:    oklch(50% 0.22 22);
+  --heavy-dim:oklch(50% 0.22 22 / .12);
+
+  /* ── Set-type token colors ───────────────────────────── */
+  --set-warmup:  oklch(76% 0.13 85);
+  --set-working: oklch(72% 0.16 148);
+  --set-amrap:   oklch(70% 0.175 42);
+  --set-emom:    oklch(60% 0.16 20);
+  --set-failure: oklch(56% 0.20 18);
+
+  /* ── Motion ──────────────────────────────────────────── */
+  --dur-fast: 120ms;
+  --dur:      180ms;
+  --dur-slow: 260ms;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+
+  /* ── Type families ───────────────────────────────────── */
+  --font-display: 'Big Shoulders Display', sans-serif;
+  --font-body:    'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+
   /* ── Legacy aliases ─────────────────────────────────── */
   --card-bg:        var(--surface);
   --surface-raised: var(--surface-2);
@@ -63,18 +94,33 @@ h1, h2, h3,
 .day-panel-date, .modal-header h3, .page-header h2,
 .workout-card-header h3, .auth-logo, .dash-card-title,
 .ai-result-name {
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
 }
 
+h1 { line-height: 0.92; letter-spacing: 0.005em; }
+h2 { line-height: 0.95; letter-spacing: 0.01em; }
+h3 { line-height: 1.05; letter-spacing: 0.02em; }
+
 body {
-  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
   background: var(--bg);
   color: var(--text);
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
+}
+
+/* ── Eyebrow tier ─────────────────────────────────────── */
+.eyebrow {
+  font-family: 'Big Shoulders Display', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  line-height: 1;
+  color: var(--accent);
 }
 
 a { color: inherit; text-decoration: none; }
@@ -133,7 +179,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 .btn-primary {
   background: var(--accent);
-  color: oklch(96% 0.005 232);
+  color: var(--on-accent);
 }
 .btn-primary:hover  { background: var(--accent-hover); }
 .btn-primary:active { background: var(--accent-hover); }
@@ -160,6 +206,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   font-size: 1rem;
   cursor: pointer;
   padding: .3rem .35rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
   border-radius: var(--radius-sm);
   transition: color .12s, background .12s, transform .08s ease-out;
   -webkit-tap-highlight-color: transparent;
@@ -176,21 +224,19 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(160deg, oklch(14% 0.008 60), oklch(6% 0.005 60));
+  min-height: 100dvh;
 }
-.hero { text-align: center; padding: 2rem; }
-.hero h1 {
-  font-size: 3.25rem;
-  font-weight: 800;
-  letter-spacing: -.03em;
-  color: var(--text);
-  margin-bottom: .6rem;
-  line-height: 1.1;
-}
-.hero h1 span { color: var(--accent); }
+.hero { text-align: center; padding: 2.5rem 2rem; }
+.hero-wordmark { margin: 0 auto 2rem; color: var(--text); }
+.hero-wordmark svg { display: block; width: 100%; max-width: 380px; height: auto; margin: 0 auto; }
+.hero-mono { margin: 0 auto 1.75rem; color: var(--text); }
+.hero-mono svg { display: block; margin: 0 auto; }
 .hero p {
-  font-size: 1.1rem;
-  color: var(--text-muted);
+  font-size: 1rem;
+  color: var(--text-2);
   margin-bottom: 2rem;
+  letter-spacing: 0.01em;
 }
 .hero-actions { display: flex; gap: .75rem; justify-content: center; }
 
@@ -295,13 +341,12 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
   z-index: 10;
 }
 .nav-logo {
-  font-family: 'Barlow Semi Condensed', sans-serif;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
   color: var(--text);
+  line-height: 0;
 }
+.nav-logo svg { display: block; }
 .nav-right {
   display: flex;
   align-items: center;
@@ -396,7 +441,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
   margin-bottom: 1.75rem;
 }
 .page-header h2 {
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
   font-size: 1.6rem;
   font-weight: 700;
   letter-spacing: .01em;
@@ -648,7 +693,7 @@ body.modal-open { overflow: hidden; }
   border-radius: 6px;
   cursor: pointer;
   transition: background .1s;
-  min-height: 2.4rem;
+  min-height: 2.75rem;
 }
 .cal-day { transition: background .08s, transform .08s ease-out; }
 .cal-day:hover  { background: var(--surface-2); }
@@ -666,7 +711,7 @@ body.modal-open { overflow: hidden; }
   justify-content: center;
   border-radius: 50%;
 }
-.cal-day.today .cal-day-num { background: var(--accent); color: oklch(97% 0.005 232); font-weight: 800; }
+.cal-day.today .cal-day-num { background: var(--accent); color: var(--on-accent); font-weight: 800; }
 
 .cal-dots { display: flex; gap: 2px; margin-top: 2px; flex-wrap: wrap; justify-content: center; }
 .cal-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
@@ -771,7 +816,7 @@ body.modal-open { overflow: hidden; }
 .stat-card:hover { border-color: var(--border-strong); }
 
 .stat-value {
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
   font-size: 2.2rem;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -869,8 +914,8 @@ body.modal-open { overflow: hidden; }
 .activity-cell { width: 12px; height: 12px; border-radius: 3px; }
 .activity-empty { background: transparent; }
 .activity-0 { background: var(--surface-2); }
-.activity-1 { background: oklch(58% 0.12 232 / .22); }
-.activity-2 { background: oklch(58% 0.12 232 / .55); }
+.activity-1 { background: color-mix(in oklch, var(--accent) 25%, transparent); }
+.activity-2 { background: color-mix(in oklch, var(--accent) 55%, transparent); }
 .activity-3 { background: var(--accent); }
 
 .activity-legend {
@@ -908,7 +953,7 @@ body.modal-open { overflow: hidden; }
   margin-bottom: 24px;
 }
 .home-weekday {
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.13em;
@@ -916,7 +961,7 @@ body.modal-open { overflow: hidden; }
   color: var(--text-muted);
 }
 .home-day {
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -981,7 +1026,7 @@ body.modal-open { overflow: hidden; }
   margin-bottom: 12px;
 }
 .last-session-title {
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -1090,7 +1135,7 @@ body.modal-open { overflow: hidden; }
   gap: 6px;
 }
 .stats-strip-value {
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--text);
@@ -1140,10 +1185,10 @@ body.modal-open { overflow: hidden; }
   width: 100%;
   min-height: 52px;
   background: var(--accent);
-  color: oklch(96% 0.005 232);
+  color: oklch(96% 0.006 85);
   border: none;
   border-radius: var(--radius);
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -1254,7 +1299,7 @@ body.modal-open { overflow: hidden; }
   cursor: pointer;
   transition: background .1s, color .1s, border-color .1s;
 }
-.pct-quick-btn:hover { background: var(--accent); color: oklch(97% 0.005 232); border-color: var(--accent); }
+.pct-quick-btn:hover { background: var(--accent); color: oklch(96% 0.006 85); border-color: var(--accent); }
 
 /* ── Set chips (workout display) ──────────────────────── */
 .set-chips { display: flex; flex-wrap: wrap; gap: .2rem; margin-top: .25rem; }
@@ -1528,7 +1573,7 @@ body.sheet-open { overflow: hidden; }
   padding: 1rem 1.2rem 1.75rem;
   z-index: 701;
   transform: translateY(100%);
-  transition: transform .26s cubic-bezier(.22,.68,0,1.08);
+  transition: transform .26s var(--ease-out);
   box-shadow: 0 -6px 32px oklch(0% 0 0 / .45);
 }
 .sheet-panel.open { transform: translateY(0); }
@@ -1725,11 +1770,11 @@ body.sheet-open { overflow: hidden; }
 }
 .set-type-badge:active { opacity: .7; }
 
-.badge-warmup  { background: oklch(63% 0.13 250 / .12); color: oklch(63% 0.13 250); }
-.badge-working { background: oklch(72% 0.16 148 / .12); color: oklch(72% 0.16 148); }
-.badge-amrap   { background: oklch(68% 0.15 43  / .12); color: oklch(68% 0.15 43); }
-.badge-emom    { background: oklch(64% 0.17 300 / .12); color: oklch(64% 0.17 300); }
-.badge-failure { background: oklch(60% 0.19 18  / .12); color: oklch(60% 0.19 18); }
+.badge-warmup  { background: color-mix(in oklch, var(--set-warmup)  12%, transparent); color: var(--set-warmup); }
+.badge-working { background: color-mix(in oklch, var(--set-working) 12%, transparent); color: var(--set-working); }
+.badge-amrap   { background: color-mix(in oklch, var(--set-amrap)   12%, transparent); color: var(--set-amrap); }
+.badge-emom    { background: color-mix(in oklch, var(--set-emom)    12%, transparent); color: var(--set-emom); }
+.badge-failure { background: color-mix(in oklch, var(--set-failure) 12%, transparent); color: var(--set-failure); }
 
 /* ── Session progress indicators ─────────────────────── */
 .ex-block-progress {
@@ -1882,7 +1927,7 @@ body.sheet-open { overflow: hidden; }
   margin-bottom: 14px;
 }
 .wh-session-name {
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -2123,7 +2168,7 @@ body.sheet-open { overflow: hidden; }
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--text-2);
-  font-family: 'Barlow Semi Condensed', sans-serif;
+  font-family: 'Big Shoulders Display', sans-serif;
   font-size: .85rem;
   font-weight: 600;
   letter-spacing: .04em;
@@ -2274,6 +2319,30 @@ body.sheet-open { overflow: hidden; }
   font-size: .875rem;
   line-height: 1.55;
   resize: vertical;
+}
+
+.acct-save-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding-top: var(--sp-4);
+  margin-top: var(--sp-4);
+  border-top: 1px solid var(--border);
+}
+.acct-save-row .btn-primary {
+  min-width: 90px;
+  justify-content: center;
+  transition: background .15s, color .15s, min-width .15s;
+}
+.acct-save-row .btn-primary.saved {
+  background: var(--success);
+  color: oklch(10% 0.01 145);
+}
+
+.save-error {
+  font-size: .78rem;
+  color: var(--danger);
+  font-weight: 500;
 }
 
 /* ── Nav username as link ──────────────────────────── */
